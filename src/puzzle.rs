@@ -13,7 +13,7 @@ impl Puzzle {
         let input = std::fs::read_to_string(input_file).context("could not read input file")?;
         match (self.day, self.part) {
             (1, 1) => Ok(Box::new(crate::day1::part1(input.as_ref())?)),
-            // (1, 2) => Ok(Box::new(crate::day1::part2(input.as_ref())?)),
+            (1, 2) => Ok(Box::new(crate::day1::part2(input.as_ref())?)),
             _ => bail!("day {} part {} is not implemented", self.day, self.part),
         }
     }
