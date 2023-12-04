@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 
 mod day1;
+mod day2;
 mod puzzle;
 
 #[derive(Parser)]

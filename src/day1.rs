@@ -1,12 +1,9 @@
-use std::sync::OnceLock;
 use anyhow::Result;
 use regex::Regex;
+use std::sync::OnceLock;
 
 pub fn part1(input: &str) -> Result<usize> {
-    let res = input
-        .lines()
-        .map(|line| parse_line_part1(line))
-        .sum();
+    let res = input.lines().map(|line| parse_line_part1(line)).sum();
     Ok(res)
 }
 
@@ -27,10 +24,7 @@ fn parse_line_part1(line: &str) -> usize {
 }
 
 pub fn part2(input: &str) -> Result<usize> {
-    let res = input
-        .lines()
-        .map(|line| parse_line_part2(line))
-        .sum();
+    let res = input.lines().map(|line| parse_line_part2(line)).sum();
     Ok(res)
 }
 
@@ -46,8 +40,9 @@ fn parse_line_part2(line: &str) -> usize {
     });
 
     // Find the first number on the line
-    let first: usize = re1.find(line).map(|m| {
-        match m.as_str() {
+    let first: usize = re1
+        .find(line)
+        .map(|m| match m.as_str() {
             "1" | "one" => 1,
             "2" | "two" => 2,
             "3" | "three" => 3,
@@ -57,14 +52,15 @@ fn parse_line_part2(line: &str) -> usize {
             "7" | "seven" => 7,
             "8" | "eight" => 8,
             "9" | "nine" => 9,
-            _ => panic!("bad regex match")
-        }
-    }).unwrap();
+            _ => panic!("bad regex match"),
+        })
+        .unwrap();
 
     // Find the last number on the line
     let reverse_line: String = line.chars().rev().collect();
-    let last: usize = re2.find(&reverse_line).map(|m| {
-        match m.as_str() {
+    let last: usize = re2
+        .find(&reverse_line)
+        .map(|m| match m.as_str() {
             "1" | "eno" => 1,
             "2" | "owt" => 2,
             "3" | "eerht" => 3,
@@ -74,9 +70,9 @@ fn parse_line_part2(line: &str) -> usize {
             "7" | "neves" => 7,
             "8" | "thgie" => 8,
             "9" | "enin" => 9,
-            _ => panic!("bad regex match")
-        }
-    }).unwrap();
+            _ => panic!("bad regex match"),
+        })
+        .unwrap();
 
     (first * 10) + last
 }
@@ -106,7 +102,7 @@ zoneight234
 
     #[test]
     fn test_part2_gives_correct_answer() {
-        let res= part2(INPUT2).unwrap();
+        let res = part2(INPUT2).unwrap();
         assert_eq!(res, 281);
     }
 }
