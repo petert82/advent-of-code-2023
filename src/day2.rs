@@ -19,6 +19,20 @@ pub fn part1(input: &str) -> Result<usize> {
     Ok(res)
 }
 
+pub fn part2(input: &str) -> Result<usize> {
+    let Ok((_, games)) = parse_games(input) else {
+        bail!("could not parse input");
+    };
+    let res = games
+        .iter()
+        .map(|gm| {
+            let (r, g, b) = gm.min_cube_set();
+            r * g * b
+        })
+        .sum();
+    Ok(res)
+}
+
 #[derive(Debug, PartialEq)]
 struct Game {
     id: usize,
@@ -28,6 +42,32 @@ struct Game {
 impl Game {
     pub fn all_reveals_less_than(&self, r: usize, g: usize, b: usize) -> bool {
         self.reveals.iter().all(|rv| rv.has_less_than(r, g, b))
+    }
+
+    pub fn min_cube_set(&self) -> (usize, usize, usize) {
+        let mut max_r = 0;
+        let mut max_g = 0;
+        let mut max_b = 0;
+
+        for rv in self.reveals.iter() {
+            if let Some(r) = rv.r {
+                if r > max_r {
+                    max_r = r;
+                }
+            }
+            if let Some(g) = rv.g {
+                if g > max_g {
+                    max_g = g;
+                }
+            }
+            if let Some(b) = rv.b {
+                if b > max_b {
+                    max_b = b;
+                }
+            }
+        }
+
+        (max_r, max_g, max_b)
     }
 }
 
@@ -116,6 +156,12 @@ Game 5: 6 red, 1 blue, 3 green; 2 blue, 1 red, 2 green";
     fn test_part1_gives_correct_answer() {
         let res = part1(INPUT1).unwrap();
         assert_eq!(res, 8);
+    }
+
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT1).unwrap();
+        assert_eq!(res, 2286);
     }
 
     #[test]
