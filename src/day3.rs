@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 pub fn part1(input: &str) -> Result<usize> {
     let grid = Grid::from(input);
@@ -10,6 +10,37 @@ pub fn part1(input: &str) -> Result<usize> {
         .map(|n| n.into())
         .collect();
     Ok(numbers.iter().sum())
+}
+
+pub fn part2(input: &str) -> Result<usize> {
+    // Get numbers
+    let grid = Grid::from(input);
+    let numbers: Vec<Number> = grid.parse_numbers();
+
+    // Make a map of coord -> number
+    let num_coords: HashMap<Coord, usize> = numbers.iter().fold(HashMap::new(), |mut acc, n| {
+        let n_usize: usize = n.into();
+        for c in n.num_coords.iter() {
+            acc.insert(c.clone(), n_usize);
+        }
+        acc
+    });
+    // Get gear coords
+    // For each gear, make set of numbers in adjacent cells, if list len is 2 keep and multiply members
+    let sum: usize = grid
+        .parse_gear_coords()
+        .iter()
+        .map(|c| {
+            grid.adjacent_coords(c.clone())
+                .iter()
+                .map(|c| num_coords.get(c).cloned())
+                .flatten()
+                .collect::<HashSet<usize>>()
+        })
+        .filter(|nums| nums.len() == 2)
+        .map(|nums| nums.iter().product::<usize>())
+        .sum();
+    Ok(sum)
 }
 
 type Coord = (usize, usize);
@@ -24,6 +55,7 @@ struct Grid {
 #[derive(Debug, PartialEq)]
 enum Cell {
     Symbol,
+    Gear,
     Empty,
     Digit(char),
 }
@@ -49,7 +81,7 @@ impl Number {
         self
     }
 
-    pub fn push_adjacent_coords(&mut self, coord: Coord, coords: Vec<Coord>) -> &mut Self {
+    pub fn push_adjacent_coords(&mut self, coord: Coord, coords: HashSet<Coord>) -> &mut Self {
         self.num_coords.insert(coord);
         self.adjacent_coords
             .extend(coords.iter().filter(|c| !self.num_coords.contains(c)));
@@ -70,6 +102,12 @@ impl From<Number> for usize {
     }
 }
 
+impl From<&Number> for usize {
+    fn from(value: &Number) -> Self {
+        value.digits.parse().unwrap()
+    }
+}
+
 impl Grid {
     pub fn parse_numbers(&self) -> Vec<Number> {
         let mut numbers = Vec::new();
@@ -80,7 +118,7 @@ impl Grid {
             }
             for (x, cell) in row.iter().enumerate() {
                 match cell {
-                    Cell::Symbol | Cell::Empty => {
+                    Cell::Gear | Cell::Symbol | Cell::Empty => {
                         if curr_num.is_some() {
                             numbers.push(curr_num.take().unwrap());
                         }
@@ -97,6 +135,18 @@ impl Grid {
         numbers
     }
 
+    pub fn parse_gear_coords(&self) -> Vec<Coord> {
+        let mut gear_coords = Vec::new();
+        for (y, row) in self.rows.iter().enumerate() {
+            for (x, cell) in row.iter().enumerate() {
+                if Cell::Gear == *cell {
+                    gear_coords.push((x, y));
+                }
+            }
+        }
+        gear_coords
+    }
+
     pub fn is_symbol(&self, (x, y): Coord) -> bool {
         let Some(row) = self.rows.get(y) else {
             return false;
@@ -105,44 +155,45 @@ impl Grid {
             return false;
         };
         match cell {
+            Cell::Gear => true,
             Cell::Symbol => true,
             _ => false,
         }
     }
 
-    fn adjacent_coords(&self, (x, y): Coord) -> Vec<Coord> {
-        let mut adj = Vec::new();
+    pub fn adjacent_coords(&self, (x, y): Coord) -> HashSet<Coord> {
+        let mut adj = HashSet::new();
         // TL
         if x > 0 && y > 0 {
-            adj.push((x - 1, y - 1));
+            adj.insert((x - 1, y - 1));
         }
         // T
         if y > 0 {
-            adj.push((x, y - 1));
+            adj.insert((x, y - 1));
         }
         // TR
         if x < self.w - 1 && y > 0 {
-            adj.push((x + 1, y - 1));
+            adj.insert((x + 1, y - 1));
         }
         // L
         if x > 0 {
-            adj.push((x - 1, y))
+            adj.insert((x - 1, y));
         }
         // R
         if x < self.w - 1 {
-            adj.push((x + 1, y));
+            adj.insert((x + 1, y));
         }
         // BL
         if x > 0 && y < self.h - 1 {
-            adj.push((x - 1, y + 1));
+            adj.insert((x - 1, y + 1));
         }
         // B
         if y < self.h - 1 {
-            adj.push((x, y + 1));
+            adj.insert((x, y + 1));
         }
         // BR
         if x < self.w - 1 && y < self.h - 1 {
-            adj.push((x + 1, y + 1));
+            adj.insert((x + 1, y + 1));
         }
         adj
     }
@@ -174,6 +225,7 @@ impl From<char> for Cell {
             return Cell::Digit(value);
         }
         match value {
+            '*' => Cell::Gear,
             '.' => Cell::Empty,
             _ => Cell::Symbol,
         }
@@ -199,5 +251,11 @@ mod test {
     fn test_part1_gives_correct_answer() {
         let res = part1(INPUT).unwrap();
         assert_eq!(res, 4361);
+    }
+
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT).unwrap();
+        assert_eq!(res, 467835);
     }
 }
