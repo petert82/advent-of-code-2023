@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use anyhow::{bail, Result};
 use nom::{
@@ -23,6 +23,38 @@ pub fn part1(input: &str) -> Result<usize> {
     Ok(res)
 }
 
+pub fn part2(input: &str) -> Result<usize> {
+    let Ok((_, cards)) = parse_cards(input) else {
+        bail!("could not parse input")
+    };
+    let mut to_process: VecDeque<CardRef> = cards.iter().map(Card::card_ref).collect();
+    let card_index: HashMap<usize, Card> = cards.into_iter().map(|c| (c.id, c)).collect();
+    let mut card_count = 0;
+
+    loop {
+        if to_process.len() == 0 {
+            break;
+        }
+
+        let Some(card_ref) = to_process.pop_front() else {
+            break;
+        };
+        card_count += 1;
+
+        let card = card_index.get(&card_ref.id).unwrap();
+        let mut extra_cards = card.get_match_count();
+        while extra_cards > 0 {
+            let idx = card_ref.id + extra_cards;
+            if let Some(dup_card) = card_index.get(&idx) {
+                to_process.push_back(dup_card.card_ref());
+            }
+            extra_cards -= 1;
+        }
+    }
+
+    Ok(card_count)
+}
+
 #[derive(Debug)]
 struct Card {
     id: usize,
@@ -30,9 +62,17 @@ struct Card {
     numbers: HashSet<usize>,
 }
 
+struct CardRef {
+    id: usize,
+}
+
 impl Card {
     fn get_match_count(&self) -> usize {
         self.winners.intersection(&self.numbers).count()
+    }
+
+    fn card_ref(&self) -> CardRef {
+        CardRef { id: self.id }
     }
 }
 
@@ -80,5 +120,11 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11";
     fn test_part1_gives_correct_answer() {
         let res = part1(INPUT).unwrap();
         assert_eq!(res, 13);
+    }
+
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT).unwrap();
+        assert_eq!(res, 30);
     }
 }
