@@ -1,4 +1,11 @@
 use anyhow::{bail, Context, Result};
+use nom::{
+    character::complete::line_ending,
+    combinator::{all_consuming, opt},
+    multi::separated_list1,
+    sequence::terminated,
+    Parser,
+};
 use std::fmt::Display;
 
 #[derive(Debug, Clone)]
@@ -55,4 +62,17 @@ impl TryFrom<&str> for Puzzle {
             Err("puzzle must be given in the format {day}-{part}".to_string())
         }
     }
+}
+
+pub fn parse_lines_to_vec<'a, T>(
+    input: &'a str,
+    parser: impl Parser<&'a str, T, nom::error::Error<&'a str>>,
+) -> Result<Vec<T>> {
+    let (_, res) = all_consuming(terminated(
+        separated_list1(line_ending, parser),
+        opt(line_ending),
+    ))(input)
+    .map_err(|e| e.to_owned())
+    .context("failed to parse input")?;
+    Ok(res)
 }

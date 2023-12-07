@@ -1,19 +1,19 @@
 use std::collections::{HashMap, HashSet};
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use nom::{
     bytes::complete::{is_a, tag},
-    character::complete::{digit1, line_ending},
-    combinator::{all_consuming, map_res, opt},
+    character::complete::digit1,
+    combinator::map_res,
     multi::separated_list1,
     sequence::{separated_pair, terminated},
     IResult,
 };
 
+use crate::puzzle::parse_lines_to_vec;
+
 pub fn part1(input: &str) -> Result<usize> {
-    let Ok((_, cards)) = parse_cards(input) else {
-        bail!("could not parse input")
-    };
+    let cards = parse_lines_to_vec::<Card>(input, parse_card)?;
     let res = cards
         .iter()
         .map(Card::get_match_count)
@@ -24,9 +24,7 @@ pub fn part1(input: &str) -> Result<usize> {
 }
 
 pub fn part2(input: &str) -> Result<usize> {
-    let Ok((_, cards)) = parse_cards(input) else {
-        bail!("could not parse input")
-    };
+    let cards = parse_lines_to_vec::<Card>(input, parse_card)?;
     // how many of each card we have, indexed by ID
     let mut card_instances: HashMap<usize, usize> = cards.iter().map(|c| (c.id, 1)).collect();
 
@@ -82,13 +80,6 @@ fn parse_card(input: &str) -> IResult<&str, Card> {
         numbers: HashSet::from_iter(numbers),
     };
     Ok((input, card))
-}
-
-fn parse_cards(input: &str) -> IResult<&str, Vec<Card>> {
-    all_consuming(terminated(
-        separated_list1(line_ending, parse_card),
-        opt(line_ending),
-    ))(input)
 }
 
 #[cfg(test)]
