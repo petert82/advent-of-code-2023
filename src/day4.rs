@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
 use anyhow::{bail, Result};
 use nom::{
@@ -27,32 +27,22 @@ pub fn part2(input: &str) -> Result<usize> {
     let Ok((_, cards)) = parse_cards(input) else {
         bail!("could not parse input")
     };
-    let mut to_process: VecDeque<CardRef> = cards.iter().map(Card::card_ref).collect();
-    let card_index: HashMap<usize, Card> = cards.into_iter().map(|c| (c.id, c)).collect();
-    let mut card_count = 0;
+    // how many of each card we have, indexed by ID
+    let mut card_instances: HashMap<usize, usize> = cards.iter().map(|c| (c.id, 1)).collect();
 
-    loop {
-        if to_process.len() == 0 {
-            break;
-        }
-
-        let Some(card_ref) = to_process.pop_front() else {
-            break;
-        };
-        card_count += 1;
-
-        let card = card_index.get(&card_ref.id).unwrap();
+    for card in cards.iter() {
         let mut extra_cards = card.get_match_count();
+        let multiplier = card_instances.get(&card.id()).unwrap().clone();
         while extra_cards > 0 {
-            let idx = card_ref.id + extra_cards;
-            if let Some(dup_card) = card_index.get(&idx) {
-                to_process.push_back(dup_card.card_ref());
-            }
+            let idx = card.id() + extra_cards;
+            card_instances
+                .entry(idx)
+                .and_modify(|instance_count| *instance_count += 1 * multiplier);
             extra_cards -= 1;
         }
     }
 
-    Ok(card_count)
+    Ok(card_instances.values().sum())
 }
 
 #[derive(Debug)]
@@ -62,17 +52,13 @@ struct Card {
     numbers: HashSet<usize>,
 }
 
-struct CardRef {
-    id: usize,
-}
-
 impl Card {
-    fn get_match_count(&self) -> usize {
+    pub fn get_match_count(&self) -> usize {
         self.winners.intersection(&self.numbers).count()
     }
 
-    fn card_ref(&self) -> CardRef {
-        CardRef { id: self.id }
+    pub fn id(&self) -> usize {
+        self.id
     }
 }
 
