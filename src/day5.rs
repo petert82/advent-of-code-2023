@@ -1,21 +1,35 @@
 use anyhow::{Context, Result};
+use itertools::Itertools;
 use nom::bytes::complete::{is_a, is_not, tag};
 use nom::character::complete::{digit1, line_ending, space1};
 use nom::combinator::{all_consuming, map, map_res, opt};
 use nom::multi::separated_list1;
 use nom::sequence::{terminated, tuple};
 use nom::{IResult, Parser};
-use std::rc::Rc;
+use rayon::prelude::*;
+use std::sync::Arc;
 
 pub fn part1(input: &str) -> Result<usize> {
     let state = parse_lines::<State>(input, parse_state)?;
     Ok(state.part1())
 }
 
+pub fn part2(input: &str) -> Result<usize> {
+    let state = parse_lines::<State>(input, parse_state)?;
+    Ok(state.part2())
+}
+
 #[derive(Debug)]
 struct State {
     seeds: Vec<usize>,
-    start_map: Rc<Map>,
+    seed_ranges: Vec<SeedRange>,
+    start_map: Arc<Map>,
+}
+
+#[derive(Debug)]
+struct SeedRange {
+    min: usize,
+    max: usize,
 }
 
 #[derive(Debug)]
@@ -23,7 +37,7 @@ struct Map {
     #[allow(dead_code)]
     name: String,
     ranges: Vec<MapRange>,
-    next: Option<Rc<Map>>,
+    next: Option<Arc<Map>>,
 }
 
 #[derive(Debug)]
@@ -34,8 +48,20 @@ struct MapRange {
 }
 
 impl State {
-    pub fn new(seeds: Vec<usize>, start_map: Rc<Map>) -> Self {
-        Self { seeds, start_map }
+    pub fn new(seeds: Vec<usize>, start_map: Arc<Map>) -> Self {
+        let seed_ranges = seeds
+            .iter()
+            .tuples()
+            .map(|(start, len)| SeedRange {
+                min: *start,
+                max: *start + *len - 1,
+            })
+            .collect();
+        Self {
+            seeds,
+            start_map,
+            seed_ranges,
+        }
     }
 
     pub fn part1(&self) -> usize {
@@ -45,10 +71,23 @@ impl State {
             .min()
             .unwrap()
     }
+
+    pub fn part2(&self) -> usize {
+        self.seed_ranges
+            .par_iter()
+            .map(|range| {
+                (range.min..range.max)
+                    .map(|s| self.start_map.lookup(s))
+                    .min()
+                    .unwrap()
+            })
+            .min()
+            .unwrap()
+    }
 }
 
 impl Map {
-    pub fn new(name: String, ranges: Vec<MapRange>, next: Option<Rc<Map>>) -> Self {
+    pub fn new(name: String, ranges: Vec<MapRange>, next: Option<Arc<Map>>) -> Self {
         Self { name, ranges, next }
     }
 
@@ -112,16 +151,16 @@ fn parse_state(input: &str) -> IResult<&str, State> {
     let (input, _) = is_a("\r\n")(input)?;
     let (input, maps) = separated_list1(is_a("\r\n"), parse_map)(input)?;
 
-    let mut start_map: Option<Rc<Map>> = None;
-    let mut prev_map: Option<Rc<Map>> = None;
+    let mut start_map: Option<Arc<Map>> = None;
+    let mut prev_map: Option<Arc<Map>> = None;
 
     for mut map in maps.into_iter().rev() {
         if prev_map.is_some() {
-            map.next = Some(Rc::clone(&prev_map.take().unwrap()));
+            map.next = Some(Arc::clone(&prev_map.take().unwrap()));
         }
-        let map_rc = Rc::new(map);
-        start_map = Some(Rc::clone(&map_rc));
-        prev_map = Some(Rc::clone(&map_rc));
+        let map_arc = Arc::new(map);
+        start_map = Some(Arc::clone(&map_arc));
+        prev_map = Some(Arc::clone(&map_arc));
     }
 
     Ok((input, State::new(seeds, start_map.unwrap())))
@@ -182,6 +221,12 @@ humidity-to-location map:
     }
 
     #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT).unwrap();
+        assert_eq!(res, 46);
+    }
+
+    #[test]
     fn test_can_lookup_a_value_in_a_map_range() {
         let mr = MapRange::new(98, 50, 2);
 
@@ -211,7 +256,7 @@ humidity-to-location map:
         ];
         let m2 = Map::new("map-2".to_string(), ranges2, None);
         let ranges1 = vec![MapRange::new(98, 50, 2), MapRange::new(50, 52, 48)];
-        let m1 = Map::new("map-1".to_string(), ranges1, Some(Rc::new(m2)));
+        let m1 = Map::new("map-1".to_string(), ranges1, Some(Arc::new(m2)));
         assert_eq!(m1.lookup(79), 81);
         assert_eq!(m1.lookup(14), 53);
     }
