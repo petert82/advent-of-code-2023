@@ -76,7 +76,7 @@ impl State {
         self.seed_ranges
             .par_iter()
             .map(|range| {
-                (range.min..range.max)
+                (range.min..=range.max)
                     .into_par_iter()
                     .map(|s| self.start_map.lookup(s))
                     .min()
