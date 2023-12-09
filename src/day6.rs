@@ -11,8 +11,14 @@ use nom::{
 use crate::puzzle::parse_all_to;
 
 pub fn part1(input: &str) -> Result<usize> {
-    let mut state = parse_all_to(input, parse_state)?;
-    let res = state.part1();
+    let mut state = parse_all_to(input, parse_state_part1)?;
+    let res = state.calculate_win_counts().product();
+    Ok(res)
+}
+
+pub fn part2(input: &str) -> Result<usize> {
+    let mut state = parse_all_to(input, parse_state_part2)?;
+    let res = state.calculate_win_counts().next().unwrap();
     Ok(res)
 }
 
@@ -42,15 +48,14 @@ impl State {
         }
     }
 
-    pub fn part1(&mut self) -> usize {
+    pub fn calculate_win_counts(&mut self) -> impl Iterator<Item = usize> + '_ {
         self.time += 1;
         let mut v: usize;
         for t in 0..=self.max_duration {
             v = t * self.acceleration;
             self.races.iter_mut().for_each(|r| r.step(t, v));
         }
-
-        self.races.iter().map(|r| r.win_count).product()
+        self.races.iter().map(|r| r.win_count)
     }
 }
 
@@ -85,7 +90,7 @@ fn number(digits: &str) -> IResult<&str, usize> {
     map_res(digit1, |n: &str| n.parse::<usize>())(digits)
 }
 
-fn parse_races(input: &str) -> IResult<&str, Vec<Race>> {
+fn parse_races_part1(input: &str) -> IResult<&str, Vec<Race>> {
     let parse_times = preceded(
         terminated(tag("Time:"), is_a(" ")),
         separated_list1(is_a(" "), number),
@@ -104,8 +109,33 @@ fn parse_races(input: &str) -> IResult<&str, Vec<Race>> {
     Ok((input, races))
 }
 
-fn parse_state(input: &str) -> IResult<&str, State> {
-    map(parse_races, State::new)(input)
+fn parse_state_part1(input: &str) -> IResult<&str, State> {
+    map(parse_races_part1, State::new)(input)
+}
+
+fn parse_race_part2(input: &str) -> IResult<&str, Vec<Race>> {
+    let parse_time = map_res(
+        preceded(
+            terminated(tag("Time:"), is_a(" ")),
+            separated_list1(is_a(" "), digit1),
+        ),
+        |parts| parts.join("").parse::<usize>(),
+    );
+    let parse_distance = map_res(
+        preceded(
+            terminated(tag("Distance:"), is_a(" ")),
+            separated_list1(is_a(" "), digit1),
+        ),
+        |parts| parts.join("").parse::<usize>(),
+    );
+    let (input, (duration, distance)) =
+        separated_pair(parse_time, line_ending, parse_distance)(input)?;
+    let race = Race::new(duration, distance);
+    Ok((input, vec![race]))
+}
+
+fn parse_state_part2(input: &str) -> IResult<&str, State> {
+    map(parse_race_part2, State::new)(input)
 }
 
 #[cfg(test)]
@@ -119,5 +149,11 @@ Distance:  9  40  200";
     fn test_part1_gives_correct_answer() {
         let res = part1(INPUT).unwrap();
         assert_eq!(res, 288);
+    }
+
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT).unwrap();
+        assert_eq!(res, 71503);
     }
 }
