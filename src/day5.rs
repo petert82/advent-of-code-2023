@@ -1,21 +1,23 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use itertools::Itertools;
 use nom::bytes::complete::{is_a, is_not, tag};
 use nom::character::complete::{digit1, line_ending, space1};
-use nom::combinator::{all_consuming, map, map_res, opt};
+use nom::combinator::{map, map_res};
 use nom::multi::separated_list1;
 use nom::sequence::{terminated, tuple};
-use nom::{IResult, Parser};
+use nom::IResult;
 use rayon::prelude::*;
 use std::sync::Arc;
 
+use crate::puzzle::parse_all_to;
+
 pub fn part1(input: &str) -> Result<usize> {
-    let state = parse_lines::<State>(input, parse_state)?;
+    let state = parse_all_to::<State>(input, parse_state)?;
     Ok(state.part1())
 }
 
 pub fn part2(input: &str) -> Result<usize> {
-    let state = parse_lines::<State>(input, parse_state)?;
+    let state = parse_all_to::<State>(input, parse_state)?;
     Ok(state.part2())
 }
 
@@ -165,16 +167,6 @@ fn parse_state(input: &str) -> IResult<&str, State> {
     }
 
     Ok((input, State::new(seeds, start_map.unwrap())))
-}
-
-fn parse_lines<'a, T>(
-    input: &'a str,
-    parser: impl Parser<&'a str, T, nom::error::Error<&'a str>>,
-) -> Result<T> {
-    let (_, res) = all_consuming(terminated(parser, opt(line_ending)))(input)
-        .map_err(|e| e.to_owned())
-        .context("failed to parse input")?;
-    Ok(res)
 }
 
 #[cfg(test)]

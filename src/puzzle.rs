@@ -66,6 +66,16 @@ impl TryFrom<&str> for Puzzle {
     }
 }
 
+pub fn parse_all_to<'a, T>(
+    input: &'a str,
+    parser: impl Parser<&'a str, T, nom::error::Error<&'a str>>,
+) -> Result<T> {
+    let (_, res) = all_consuming(terminated(parser, opt(line_ending)))(input)
+        .map_err(|e| e.to_owned())
+        .context("failed to parse input")?;
+    Ok(res)
+}
+
 pub fn parse_lines_to_vec<'a, T>(
     input: &'a str,
     parser: impl Parser<&'a str, T, nom::error::Error<&'a str>>,
