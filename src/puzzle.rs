@@ -32,7 +32,7 @@ impl Puzzle {
             (6, 1) => Ok(Box::new(crate::day6::part1(input.as_ref())?)),
             (6, 2) => Ok(Box::new(crate::day6::part2(input.as_ref())?)),
             (7, 1) => Ok(Box::new(crate::day7::part1(input.as_ref())?)),
-            // (7, 2) => Ok(Box::new(crate::day7::part2(input.as_ref())?)),
+            (7, 2) => Ok(Box::new(crate::day7::part2(input.as_ref())?)),
             _ => bail!("day {} part {} is not implemented", self.day, self.part),
         }
     }
