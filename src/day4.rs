@@ -3,14 +3,12 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Result;
 use nom::{
     bytes::complete::{is_a, tag},
-    character::complete::digit1,
-    combinator::map_res,
     multi::separated_list1,
     sequence::{separated_pair, terminated},
     IResult,
 };
 
-use crate::puzzle::parse_lines_to_vec;
+use crate::parse::{number, parse_lines_to_vec};
 
 pub fn part1(input: &str) -> Result<usize> {
     let cards = parse_lines_to_vec::<Card>(input, parse_card)?;
@@ -58,10 +56,6 @@ impl Card {
     pub fn id(&self) -> usize {
         self.id
     }
-}
-
-fn number(digits: &str) -> IResult<&str, usize> {
-    map_res(digit1, |n: &str| n.parse::<usize>())(digits)
 }
 
 fn parse_card(input: &str) -> IResult<&str, Card> {

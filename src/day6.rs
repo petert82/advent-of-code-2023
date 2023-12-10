@@ -8,7 +8,7 @@ use nom::{
     IResult,
 };
 
-use crate::puzzle::parse_all_to;
+use crate::parse::{number, parse_all_to};
 
 pub fn part1(input: &str) -> Result<usize> {
     let mut state = parse_all_to(input, parse_state_part1)?;
@@ -84,10 +84,6 @@ impl Race {
         let remaining_t = self.duration - t;
         (v * remaining_t) > self.distance
     }
-}
-
-fn number(digits: &str) -> IResult<&str, usize> {
-    map_res(digit1, |n: &str| n.parse::<usize>())(digits)
 }
 
 fn parse_races_part1(input: &str) -> IResult<&str, Vec<Race>> {

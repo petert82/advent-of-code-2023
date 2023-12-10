@@ -2,15 +2,11 @@ use std::{cmp::Ordering, collections::HashMap};
 
 use anyhow::Result;
 use nom::{
-    bytes::complete::tag,
-    character::complete::{digit1, one_of},
-    combinator::map_res,
-    multi::count,
-    sequence::separated_pair,
-    IResult,
+    bytes::complete::tag, character::complete::one_of, combinator::map_res, multi::count,
+    sequence::separated_pair, IResult,
 };
 
-use crate::puzzle::parse_lines_to_vec;
+use crate::parse::{number, parse_lines_to_vec};
 
 pub fn part1(input: &str) -> Result<usize> {
     run_with_rules(input, ParsingRules::PartOne)
@@ -195,10 +191,6 @@ impl TryFrom<(ParsingRules, char)> for Card {
         };
         Ok(card)
     }
-}
-
-fn number(digits: &str) -> IResult<&str, usize> {
-    map_res(digit1, |n: &str| n.parse::<usize>())(digits)
 }
 
 #[derive(Clone, Copy)]

@@ -1,11 +1,13 @@
 use anyhow::{bail, Result};
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{char, digit1, line_ending};
-use nom::combinator::{all_consuming, map, map_res, opt};
+use nom::character::complete::{char, line_ending};
+use nom::combinator::{all_consuming, map, opt};
 use nom::multi::separated_list1;
 use nom::sequence::{preceded, separated_pair, terminated};
 use nom::IResult;
+
+use crate::parse::number;
 
 pub fn part1(input: &str) -> Result<usize> {
     let Ok((_, games)) = parse_games(input) else {
@@ -94,10 +96,6 @@ impl Reveal {
         };
         r_less && b_less && g_less
     }
-}
-
-fn number(digits: &str) -> IResult<&str, usize> {
-    map_res(digit1, |n: &str| n.parse::<usize>())(digits)
 }
 
 fn reveal(input: &str) -> IResult<&str, Reveal> {

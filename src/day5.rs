@@ -1,15 +1,15 @@
 use anyhow::Result;
 use itertools::Itertools;
 use nom::bytes::complete::{is_a, is_not, tag};
-use nom::character::complete::{digit1, line_ending, space1};
-use nom::combinator::{map, map_res};
+use nom::character::complete::{line_ending, space1};
+use nom::combinator::map;
 use nom::multi::separated_list1;
 use nom::sequence::{terminated, tuple};
 use nom::IResult;
 use rayon::prelude::*;
 use std::sync::Arc;
 
-use crate::puzzle::parse_all_to;
+use crate::parse::{number, parse_all_to};
 
 pub fn part1(input: &str) -> Result<usize> {
     let state = parse_all_to::<State>(input, parse_state)?;
@@ -120,10 +120,6 @@ impl MapRange {
         let offset = n - self.src_start;
         Some(self.dst_start + offset)
     }
-}
-
-fn number(digits: &str) -> IResult<&str, usize> {
-    map_res(digit1, |n: &str| n.parse::<usize>())(digits)
 }
 
 fn parse_seeds(input: &str) -> IResult<&str, Vec<usize>> {
