@@ -17,6 +17,11 @@ pub fn part1(input: &str) -> Result<usize> {
     Ok(state.steps_to_find("ZZZ"))
 }
 
+pub fn part2(input: &str) -> Result<usize> {
+    let state = parse_all_to(input, parse_state)?;
+    Ok(state.steps_for_part2())
+}
+
 #[derive(Debug)]
 struct State<'a> {
     directions: Vec<Direction>,
@@ -49,6 +54,66 @@ impl<'a> State<'a> {
             steps += 1;
         }
         steps
+    }
+
+    pub fn steps_for_part2(&self) -> usize {
+        // Starting points for our "ghosts"
+        let ghost_keys = self
+            .nodes
+            .keys()
+            .filter(|k| k.ends_with("A"))
+            .map(|k| *k)
+            .collect::<Vec<&str>>();
+
+        // Entries are how long each "ghost" took to find their first end point
+        let mut end_steps = ghost_keys.into_iter().map(|k| {
+            let mut directions_cyle = self.directions.iter().cycle();
+            let mut steps = 0;
+            let mut key = k;
+            loop {
+                if key.ends_with("Z") {
+                    break;
+                }
+                let dir = directions_cyle.next().unwrap();
+                let next = self.nodes.get(key).unwrap();
+                key = match dir {
+                    Direction::Left => next.0,
+                    Direction::Right => next.1,
+                };
+                steps += 1;
+            }
+            steps
+        });
+
+        // Find the lowest common multiple of all of the ghosts' end points
+        let n = end_steps.next().unwrap();
+        let lcm = end_steps.fold(n, |n, m| lcm(n, m));
+
+        lcm
+    }
+}
+
+fn lcm(first: usize, second: usize) -> usize {
+    first * second / gcd(first, second)
+}
+
+fn gcd(first: usize, second: usize) -> usize {
+    let mut max = first;
+    let mut min = second;
+    if min > max {
+        let val = max;
+        max = min;
+        min = val;
+    }
+
+    loop {
+        let res = max % min;
+        if res == 0 {
+            return min;
+        }
+
+        max = min;
+        min = res;
     }
 }
 
@@ -111,9 +176,20 @@ ZZZ = (ZZZ, ZZZ)";
         assert_eq!(res, 6);
     }
 
-    // #[test]
-    // fn test_part2_gives_correct_answer() {
-    //     let res = part2(INPUT).unwrap();
-    //     assert_eq!(res, 5905);
-    // }
+    const INPUT2: &str = "LR
+
+OOA = (OOB, XXX)
+OOB = (XXX, OOZ)
+OOZ = (OOB, XXX)
+TTA = (TTB, XXX)
+TTB = (TTC, TTC)
+TTC = (TTZ, TTZ)
+TTZ = (TTB, TTB)
+XXX = (XXX, XXX)";
+
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT2).unwrap();
+        assert_eq!(res, 6);
+    }
 }
