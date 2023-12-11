@@ -11,12 +11,26 @@ use nom::{
 use crate::parse::parse_lines_to_vec;
 
 pub fn part1(input: &str) -> Result<i64> {
+    solve(input, ExtrapolateDir::Forwards)
+}
+
+pub fn part2(input: &str) -> Result<i64> {
+    solve(input, ExtrapolateDir::Backwards)
+}
+
+#[derive(Clone, Copy)]
+enum ExtrapolateDir {
+    Forwards,
+    Backwards,
+}
+
+fn solve(input: &str, dir: ExtrapolateDir) -> Result<i64> {
     let rows = parse_lines_to_vec(input, parse_line)?;
-    let res = rows.into_iter().map(process_row).sum();
+    let res = rows.into_iter().map(|r| process_row(r, dir)).sum();
     Ok(res)
 }
 
-fn process_row(row: Vec<i64>) -> i64 {
+fn process_row(row: Vec<i64>, dir: ExtrapolateDir) -> i64 {
     let mut diff_rows = vec![row];
     let mut found_end = false;
 
@@ -29,8 +43,14 @@ fn process_row(row: Vec<i64>) -> i64 {
     diff_rows
         .iter()
         .rev()
-        .map(|v| *v.last().unwrap())
-        .reduce(|acc, l| l + acc)
+        .map(|v| match dir {
+            ExtrapolateDir::Forwards => *v.last().unwrap(),
+            ExtrapolateDir::Backwards => *v.get(0).unwrap(),
+        })
+        .reduce(|acc, l| match dir {
+            ExtrapolateDir::Forwards => l + acc,
+            ExtrapolateDir::Backwards => l - acc,
+        })
         .unwrap()
 }
 
@@ -64,9 +84,9 @@ mod test {
         assert_eq!(res, 114);
     }
 
-    // #[test]
-    // fn test_part2_gives_correct_answer() {
-    //     let res = part2(INPUT).unwrap();
-    //     assert_eq!(res, 5905);
-    // }
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT).unwrap();
+        assert_eq!(res, 2);
+    }
 }
