@@ -1,4 +1,5 @@
 use std::{
+    cell::OnceCell,
     collections::{HashMap, HashSet},
     fmt::Display,
 };
@@ -16,6 +17,7 @@ struct Grid {
     w: usize,
     h: usize,
     pipes: HashMap<Coord, Pipe>,
+    loop_coords: OnceCell<Vec<Coord>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -32,25 +34,41 @@ enum Pipe {
 }
 
 impl Grid {
-    pub fn dist_to_farthest_point(&self) -> usize {
-        let start_pipe = self.pipes.get(&self.start).unwrap();
-        // Choose one of the start pipe's exits (doesn't matter which)
-        let mut pipe_pos = start_pipe.exits(self.start).into_iter().next().unwrap();
-        let mut prev_pos = self.start;
-        let mut pipe_coords = vec![self.start];
-
-        while pipe_pos != self.start {
-            pipe_coords.push(pipe_pos);
-            let curr = pipe_pos;
-            pipe_pos = self
-                .pipes
-                .get(&pipe_pos)
-                .unwrap()
-                .other_exit(pipe_pos, prev_pos)
-                .unwrap();
-            prev_pos = curr;
+    pub fn new(start: Coord, w: usize, h: usize, pipes: HashMap<Coord, Pipe>) -> Self {
+        Self {
+            start,
+            w,
+            h,
+            pipes,
+            loop_coords: OnceCell::new(),
         }
-        pipe_coords.len() / 2
+    }
+
+    pub fn loop_coords(&self) -> &Vec<Coord> {
+        self.loop_coords.get_or_init(|| {
+            let start_pipe = self.pipes.get(&self.start).unwrap();
+            // Choose one of the start pipe's exits (doesn't matter which)
+            let mut pipe_pos = start_pipe.exits(self.start).into_iter().next().unwrap();
+            let mut prev_pos = self.start;
+            let mut pipe_coords = vec![self.start];
+
+            while pipe_pos != self.start {
+                pipe_coords.push(pipe_pos);
+                let curr = pipe_pos;
+                pipe_pos = self
+                    .pipes
+                    .get(&pipe_pos)
+                    .unwrap()
+                    .other_exit(pipe_pos, prev_pos)
+                    .unwrap();
+                prev_pos = curr;
+            }
+            pipe_coords
+        })
+    }
+
+    pub fn dist_to_farthest_point(&self) -> usize {
+        self.loop_coords().len() / 2
     }
 }
 
@@ -208,7 +226,7 @@ impl TryFrom<&str> for Grid {
             .expect("expected to have a start pipe");
         pipes.insert(start, start_pipe);
 
-        Ok(Grid { start, w, h, pipes })
+        Ok(Grid::new(start, w, h, pipes))
     }
 }
 
