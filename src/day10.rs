@@ -5,11 +5,18 @@ use std::{
 };
 
 use anyhow::{bail, Result};
+use itertools::Itertools;
 
 pub fn part1(input: &str) -> Result<usize> {
     let grid = Grid::try_from(input)?;
     println!("{}", grid);
     Ok(grid.dist_to_farthest_point())
+}
+
+pub fn part2(input: &str) -> Result<i32> {
+    let grid = Grid::try_from(input)?;
+    println!("{}", grid);
+    Ok(grid.loop_enclosed_point_count())
 }
 
 struct Grid {
@@ -70,6 +77,41 @@ impl Grid {
     pub fn dist_to_farthest_point(&self) -> usize {
         self.loop_coords().len() / 2
     }
+
+    pub fn loop_enclosed_point_count(&self) -> i32 {
+        // Calculate the area enclosed by the loop
+        // https://en.wikipedia.org/wiki/Shoelace_formula
+        let mut vertices = self
+            .loop_coords()
+            .iter()
+            .filter(|c| self.pipes.get(*c).unwrap().is_corner())
+            .collect::<Vec<_>>();
+        vertices.push(vertices.first().unwrap());
+
+        let mut area = vertices
+            .iter()
+            .tuple_windows()
+            .map(|(a, b)| {
+                let x1 = a.0;
+                let y1 = a.1;
+                let x2 = b.0;
+                let y2 = b.1;
+                let p1 = x1 * y2;
+                let p2 = y1 * x2;
+                let res = p1 - p2;
+                res
+            })
+            .sum::<i32>()
+            / 2;
+        if area < 0 {
+            area *= -1;
+        }
+
+        // Then calculate the number of points enclosed by the loop
+        // loopArea - (boundaryPointsCount / 2) + 1
+        // https://en.wikipedia.org/wiki/Pick's_theorem
+        area - (self.loop_coords().len() as i32 / 2) + 1
+    }
 }
 
 impl Coord {
@@ -118,6 +160,13 @@ impl Pipe {
             .into_iter()
             .filter(|e| *e != exit)
             .next()
+    }
+
+    pub fn is_corner(&self) -> bool {
+        match self {
+            Self::NS | Self::EW => false,
+            _ => true,
+        }
     }
 }
 
@@ -255,9 +304,45 @@ LJ.LJ";
         }
     }
 
-    // #[test]
-    // fn test_part2_gives_correct_answer() {
-    //     let res = part2(INPUT).unwrap();
-    //     assert_eq!(res, 2);
-    // }
+    const INPUT3: &str = "...........
+.S-------7.
+.|F-----7|.
+.||.....||.
+.||.....||.
+.|L-7.F-J|.
+.|..|.|..|.
+.L--J.L--J.
+...........";
+
+    const INPUT4: &str = ".F----7F7F7F7F-7....
+.|F--7||||||||FJ....
+.||.FJ||||||||L7....
+FJL7L7LJLJ||LJ.L-7..
+L--J.L7...LJS7F-7L7.
+....F-J..F7FJ|L7L7L7
+....L7.F7||L7|.L7L7|
+.....|FJLJ|FJ|F7|.LJ
+....FJL-7.||.||||...
+....L---J.LJ.LJLJ...";
+
+    const INPUT5: &str = "FF7FSF7F7F7F7F7F---7
+L|LJ||||||||||||F--J
+FL-7LJLJ||||||LJL-77
+F--JF--7||LJLJ7F7FJ-
+L---JF-JLJ.||-FJLJJ7
+|F|F-JF---7F7-L7L|7|
+|FFJF7L7F-JF7|JL---7
+7-L-JL7||F7|L7F-7F7|
+L.L7LFJ|||||FJL7||LJ
+L7JLJL-JLJLJL--JLJ.L";
+
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let cases = vec![(INPUT1, 1), (INPUT3, 4), (INPUT4, 8), (INPUT5, 10)];
+
+        for (input, expect) in cases {
+            let res = part2(input).unwrap();
+            assert_eq!(res, expect);
+        }
+    }
 }
