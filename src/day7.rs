@@ -76,7 +76,7 @@ impl Ord for Hand {
             }
             return card_cmp;
         }
-        return Ordering::Equal;
+        Ordering::Equal
     }
 }
 
@@ -103,7 +103,7 @@ impl TryFrom<&[Card]> for HandType {
             acc.entry(c).and_modify(|count| *count += 1).or_insert(1);
             acc
         });
-        let joker_count = card_count_map.get(&Card::Joker).unwrap_or(&0).clone();
+        let joker_count = *card_count_map.get(&Card::Joker).unwrap_or(&0);
         card_count_map.remove(&Card::Joker);
         // count of card types, excluding Jokers
         let card_counts = card_count_map.into_values().collect::<Vec<_>>();
@@ -144,7 +144,7 @@ impl TryFrom<&[Card]> for HandType {
         if has_two_same || joker_count == 1 {
             return Ok(Self::OnePair);
         }
-        return Ok(Self::HighCard);
+        Ok(Self::HighCard)
     }
 }
 

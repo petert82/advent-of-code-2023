@@ -28,12 +28,12 @@ pub fn part2(input: &str) -> Result<usize> {
 
     for card in cards.iter() {
         let mut extra_cards = card.get_match_count();
-        let multiplier = card_instances.get(&card.id()).unwrap().clone();
+        let multiplier = *card_instances.get(&card.id()).unwrap();
         while extra_cards > 0 {
             let idx = card.id() + extra_cards;
             card_instances
                 .entry(idx)
-                .and_modify(|instance_count| *instance_count += 1 * multiplier);
+                .and_modify(|instance_count| *instance_count += multiplier);
             extra_cards -= 1;
         }
     }

@@ -35,7 +35,7 @@ fn process_row(row: Vec<i64>, dir: ExtrapolateDir) -> i64 {
     let mut found_end = false;
 
     while !found_end {
-        let row = get_diffs(&diff_rows.last().unwrap());
+        let row = get_diffs(diff_rows.last().unwrap());
         found_end = is_all_zeros(&row);
         diff_rows.push(row);
     }
@@ -45,7 +45,7 @@ fn process_row(row: Vec<i64>, dir: ExtrapolateDir) -> i64 {
         .rev()
         .map(|v| match dir {
             ExtrapolateDir::Forwards => *v.last().unwrap(),
-            ExtrapolateDir::Backwards => *v.get(0).unwrap(),
+            ExtrapolateDir::Backwards => *v.first().unwrap(),
         })
         .reduce(|acc, l| match dir {
             ExtrapolateDir::Forwards => l + acc,

@@ -3,14 +3,14 @@ use regex::Regex;
 use std::sync::OnceLock;
 
 pub fn part1(input: &str) -> Result<usize> {
-    let res = input.lines().map(|line| parse_line_part1(line)).sum();
+    let res = input.lines().map(parse_line_part1).sum();
     Ok(res)
 }
 
 fn parse_line_part1(line: &str) -> usize {
     let mut digits = line
         .chars()
-        .filter(|p| p.is_digit(10))
+        .filter(|p| p.is_ascii_digit())
         .map(|d| d.to_digit(10).unwrap());
 
     let first = digits.next().unwrap();
@@ -24,7 +24,7 @@ fn parse_line_part1(line: &str) -> usize {
 }
 
 pub fn part2(input: &str) -> Result<usize> {
-    let res = input.lines().map(|line| parse_line_part2(line)).sum();
+    let res = input.lines().map(parse_line_part2).sum();
     Ok(res)
 }
 

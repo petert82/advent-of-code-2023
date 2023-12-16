@@ -99,7 +99,7 @@ fn parse_races_part1(input: &str) -> IResult<&str, Vec<Race>> {
         separated_pair(parse_times, line_ending, parse_distances)(input)?;
     let races = times
         .into_iter()
-        .zip(distances.into_iter())
+        .zip(distances)
         .map(|(duration, distance)| Race::new(duration, distance))
         .collect();
     Ok((input, races))

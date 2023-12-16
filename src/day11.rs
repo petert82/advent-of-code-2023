@@ -48,8 +48,8 @@ impl Universe {
 
 impl Coord {
     fn distance_to(&self, other: &Self) -> usize {
-        (self.x as isize - other.x as isize).abs() as usize
-            + (self.y as isize - other.y as isize).abs() as usize
+        (self.x as isize - other.x as isize).unsigned_abs()
+            + (self.y as isize - other.y as isize).unsigned_abs()
     }
 }
 
@@ -63,7 +63,7 @@ impl Display for Universe {
                     write!(f, ".")?;
                 }
             }
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
         Ok(())
     }

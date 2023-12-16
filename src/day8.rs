@@ -61,8 +61,8 @@ impl<'a> State<'a> {
         let ghost_keys = self
             .nodes
             .keys()
-            .filter(|k| k.ends_with("A"))
-            .map(|k| *k)
+            .filter(|k| k.ends_with('A'))
+            .copied()
             .collect::<Vec<&str>>();
 
         // Entries are how long each "ghost" took to find their first end point
@@ -71,7 +71,7 @@ impl<'a> State<'a> {
             let mut steps = 0;
             let mut key = k;
             loop {
-                if key.ends_with("Z") {
+                if key.ends_with('Z') {
                     break;
                 }
                 let dir = directions_cyle.next().unwrap();
@@ -87,9 +87,7 @@ impl<'a> State<'a> {
 
         // Find the lowest common multiple of all of the ghosts' end points
         let n = end_steps.next().unwrap();
-        let lcm = end_steps.fold(n, |n, m| lcm(n, m));
-
-        lcm
+        end_steps.fold(n, lcm)
     }
 }
 
@@ -101,9 +99,7 @@ fn gcd(first: usize, second: usize) -> usize {
     let mut max = first;
     let mut min = second;
     if min > max {
-        let val = max;
-        max = min;
-        min = val;
+        std::mem::swap(&mut max, &mut min);
     }
 
     loop {
@@ -129,7 +125,7 @@ impl TryFrom<char> for Direction {
     }
 }
 
-fn parse_state<'a>(input: &'a str) -> IResult<&str, State<'a>> {
+fn parse_state(input: &str) -> IResult<&str, State<'_>> {
     // Directions is a line of "LRLRLRLRLRLR"
     let parse_directions = terminated(
         many1(map_res(one_of("LR"), Direction::try_from)),

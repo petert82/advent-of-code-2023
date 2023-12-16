@@ -21,7 +21,7 @@ pub fn part2(input: &str) -> Result<usize> {
     let num_coords: HashMap<Coord, usize> = numbers.iter().fold(HashMap::new(), |mut acc, n| {
         let n_usize: usize = n.into();
         for c in n.num_coords.iter() {
-            acc.insert(c.clone(), n_usize);
+            acc.insert(*c, n_usize);
         }
         acc
     });
@@ -31,10 +31,9 @@ pub fn part2(input: &str) -> Result<usize> {
         .parse_gear_coords()
         .iter()
         .map(|c| {
-            grid.adjacent_coords(c.clone())
+            grid.adjacent_coords(*c)
                 .iter()
-                .map(|c| num_coords.get(c).cloned())
-                .flatten()
+                .filter_map(|c| num_coords.get(c).cloned())
                 .collect::<HashSet<usize>>()
         })
         .filter(|nums| nums.len() == 2)
@@ -92,7 +91,7 @@ impl Number {
     pub fn has_adjacent_symbol(&self, grid: &Grid) -> bool {
         self.adjacent_coords
             .iter()
-            .any(|coord| grid.is_symbol(coord.clone()))
+            .any(|coord| grid.is_symbol(*coord))
     }
 }
 
@@ -126,7 +125,7 @@ impl Grid {
                     Cell::Digit(c) => {
                         curr_num
                             .get_or_insert_with(Number::new)
-                            .push_digit(c.clone())
+                            .push_digit(*c)
                             .push_adjacent_coords((x, y), self.adjacent_coords((x, y)));
                     }
                 }
@@ -154,11 +153,7 @@ impl Grid {
         let Some(cell) = row.get(x) else {
             return false;
         };
-        match cell {
-            Cell::Gear => true,
-            Cell::Symbol => true,
-            _ => false,
-        }
+        matches!(cell, Cell::Gear | Cell::Symbol)
     }
 
     pub fn adjacent_coords(&self, (x, y): Coord) -> HashSet<Coord> {
@@ -221,7 +216,7 @@ impl From<&str> for Grid {
 
 impl From<char> for Cell {
     fn from(value: char) -> Self {
-        if value.is_digit(10) {
+        if value.is_ascii_digit() {
             return Cell::Digit(value);
         }
         match value {

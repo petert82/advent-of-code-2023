@@ -98,8 +98,7 @@ impl Grid {
                 let y2 = b.1;
                 let p1 = x1 * y2;
                 let p2 = y1 * x2;
-                let res = p1 - p2;
-                res
+                p1 - p2
             })
             .sum::<i32>()
             / 2;
@@ -156,17 +155,11 @@ impl Pipe {
     /// For a Pipe at `pipe_pos`, with one exit at `exit`, gets the coordinates
     /// of the other exit (assuming it would exit to a valid grid coordinate.
     pub fn other_exit(&self, pipe_pos: Coord, exit: Coord) -> Option<Coord> {
-        self.exits(pipe_pos)
-            .into_iter()
-            .filter(|e| *e != exit)
-            .next()
+        self.exits(pipe_pos).into_iter().find(|e| *e != exit)
     }
 
     pub fn is_corner(&self) -> bool {
-        match self {
-            Self::NS | Self::EW => false,
-            _ => true,
-        }
+        !matches!(self, Self::NS | Self::EW)
     }
 }
 
@@ -184,9 +177,9 @@ impl Display for Grid {
                     Some(pipe) => write!(f, "{}", pipe)?,
                 }
             }
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
-        write!(f, "\n")?;
+        writeln!(f)?;
         Ok(())
     }
 }
@@ -262,7 +255,7 @@ impl TryFrom<&str> for Grid {
             .collect::<HashSet<Coord>>();
         let start_pipe = vec![Pipe::NS, Pipe::EW, Pipe::NE, Pipe::NW, Pipe::SE, Pipe::SW]
             .into_iter()
-            .filter(|p| {
+            .find(|p| {
                 let exits = p.exits(start);
                 if exits.len() != 2 {
                     return false;
@@ -271,7 +264,6 @@ impl TryFrom<&str> for Grid {
                     .into_iter()
                     .all(|e| start_connecting_coords.contains(&e))
             })
-            .next()
             .expect("expected to have a start pipe");
         pipes.insert(start, start_pipe);
 
