@@ -21,6 +21,12 @@ struct Coord {
 }
 
 impl Universe {
+    fn new(galaxies: Vec<Coord>) -> Self {
+        let w = galaxies.iter().map(|c| c.x).max().unwrap() + 1;
+        let h = galaxies.iter().map(|c| c.y).max().unwrap() + 1;
+        Self { w, h, galaxies }
+    }
+
     fn galaxy_pair_distances(&self) -> Vec<usize> {
         self.galaxies
             .iter()
@@ -39,8 +45,8 @@ impl Coord {
 
 impl Display for Universe {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for x in 0..self.w {
-            for y in 0..self.h {
+        for y in 0..self.h {
+            for x in 0..self.w {
                 if self.galaxies.contains(&Coord { x, y }) {
                     write!(f, "#")?;
                 } else {
@@ -57,9 +63,14 @@ impl TryFrom<&str> for Universe {
     type Error = anyhow::Error;
 
     fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+        let h = value.lines().count();
+        let w = value.lines().next().unwrap().len();
         let mut map: Vec<Vec<char>> = vec![];
+        let mut x_offsets = vec![0usize; w];
+        let mut y_offsets = vec![0usize; h];
 
-        for line in value.lines() {
+        // Find empty rows
+        for (y, line) in value.lines().enumerate() {
             let mut line_empty = true;
             let mut line_chars = vec![];
             for c in line.chars() {
@@ -72,45 +83,48 @@ impl TryFrom<&str> for Universe {
             }
             map.push(line_chars);
             if line_empty {
-                let extra_line = (0..line.len()).map(|_| '.').collect();
-                map.push(extra_line);
+                increment_offsets(&mut y_offsets, y);
             }
         }
 
+        // Find empty columns
         map = transpose(map);
-        let mut expanded_map: Vec<Vec<char>> = vec![];
-        for row in map.iter() {
+        for (x, row) in map.iter().enumerate() {
             let mut row_empty = true;
-            let mut row_chars = vec![];
             for c in row.iter() {
                 if *c == '#' {
                     row_empty = false;
                 }
-                row_chars.push(*c);
             }
-            expanded_map.push(row_chars);
             if row_empty {
-                let extra_row = (0..row.len()).map(|_| '.').collect();
-                expanded_map.push(extra_row);
+                increment_offsets(&mut x_offsets, x);
             }
         }
-        expanded_map = transpose(expanded_map);
-        expanded_map = transpose(expanded_map);
 
+        // Map the
         let mut galaxies = vec![];
-        for (y, row) in expanded_map.iter().enumerate() {
-            for (x, c) in row.iter().enumerate() {
-                if *c == '#' {
-                    galaxies.push(Coord { x, y });
+        for (y, row) in value.lines().enumerate() {
+            for (x, c) in row.chars().enumerate() {
+                if c == '#' {
+                    let x_offset = x_offsets[x];
+                    let y_offset = y_offsets[y];
+                    galaxies.push(Coord {
+                        x: x + x_offset,
+                        y: y + y_offset,
+                    });
                 }
             }
         }
 
-        Ok(Universe {
-            w: expanded_map.first().unwrap().len(),
-            h: expanded_map.len(),
-            galaxies,
-        })
+        Ok(Universe::new(galaxies))
+    }
+}
+
+fn increment_offsets(offsets: &mut Vec<usize>, from: usize) {
+    for i in (from + 1)..offsets.len() {
+        if let Some(offset) = offsets.get_mut(i) {
+            *offset += 1;
+        }
     }
 }
 
