@@ -4,7 +4,17 @@ use anyhow::{bail, Result};
 use itertools::Itertools;
 
 pub fn part1(input: &str) -> Result<usize> {
-    let universe = Universe::try_from(input)?;
+    solve(input, 2)
+}
+
+pub fn part2(input: &str) -> Result<usize> {
+    solve(input, 1_000_000)
+}
+
+/// One empty row/column in `input` will be replaced with `scaling_factor` empty
+/// rows/columns.
+fn solve(input: &str, scaling_factor: usize) -> Result<usize> {
+    let universe = Universe::try_from((input, scaling_factor))?;
     Ok(universe.galaxy_pair_distances().iter().sum())
 }
 
@@ -59,18 +69,19 @@ impl Display for Universe {
     }
 }
 
-impl TryFrom<&str> for Universe {
+impl TryFrom<(&str, usize)> for Universe {
     type Error = anyhow::Error;
 
-    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
-        let h = value.lines().count();
-        let w = value.lines().next().unwrap().len();
+    fn try_from(value: (&str, usize)) -> std::result::Result<Self, Self::Error> {
+        let (input, scaling_factor) = value;
+        let h = input.lines().count();
+        let w = input.lines().next().unwrap().len();
         let mut map: Vec<Vec<char>> = vec![];
         let mut x_offsets = vec![0usize; w];
         let mut y_offsets = vec![0usize; h];
 
         // Find empty rows
-        for (y, line) in value.lines().enumerate() {
+        for (y, line) in input.lines().enumerate() {
             let mut line_empty = true;
             let mut line_chars = vec![];
             for c in line.chars() {
@@ -103,11 +114,11 @@ impl TryFrom<&str> for Universe {
 
         // Map the
         let mut galaxies = vec![];
-        for (y, row) in value.lines().enumerate() {
+        for (y, row) in input.lines().enumerate() {
             for (x, c) in row.chars().enumerate() {
                 if c == '#' {
-                    let x_offset = x_offsets[x];
-                    let y_offset = y_offsets[y];
+                    let x_offset = x_offsets[x] * (scaling_factor - 1);
+                    let y_offset = y_offsets[y] * (scaling_factor - 1);
                     galaxies.push(Coord {
                         x: x + x_offset,
                         y: y + y_offset,
@@ -163,9 +174,12 @@ mod test {
         assert_eq!(res, 374);
     }
 
-    // #[test]
-    // fn test_part2_gives_correct_answer() {
-    //     let res = part2(INPUT).unwrap();
-    //     assert_eq!(res, 30);
-    // }
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res_10 = solve(INPUT, 10).unwrap();
+        assert_eq!(res_10, 1030);
+
+        let res_100 = solve(INPUT, 100).unwrap();
+        assert_eq!(res_100, 8410);
+    }
 }
