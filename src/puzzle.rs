@@ -1,5 +1,8 @@
 use anyhow::{bail, Context, Result};
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    time::{Duration, Instant},
+};
 
 #[derive(Debug, Clone)]
 pub struct Puzzle {
@@ -8,33 +11,38 @@ pub struct Puzzle {
 }
 
 impl Puzzle {
-    pub fn run(&self) -> Result<Box<dyn Display>> {
+    pub fn run(&self) -> Result<(Box<dyn Display>, Duration)> {
         let input_file = format!("./input/day{}.txt", self.day);
         let input = std::fs::read_to_string(input_file).context("could not read input file")?;
+        let start = Instant::now();
+        Ok((self.run_part(input.as_ref())?, start.elapsed()))
+    }
+
+    fn run_part(&self, input: &str) -> Result<Box<dyn Display>> {
         match (self.day, self.part) {
-            (1, 1) => Ok(Box::new(crate::day1::part1(input.as_ref())?)),
-            (1, 2) => Ok(Box::new(crate::day1::part2(input.as_ref())?)),
-            (2, 1) => Ok(Box::new(crate::day2::part1(input.as_ref())?)),
-            (2, 2) => Ok(Box::new(crate::day2::part2(input.as_ref())?)),
-            (3, 1) => Ok(Box::new(crate::day3::part1(input.as_ref())?)),
-            (3, 2) => Ok(Box::new(crate::day3::part2(input.as_ref())?)),
-            (4, 1) => Ok(Box::new(crate::day4::part1(input.as_ref())?)),
-            (4, 2) => Ok(Box::new(crate::day4::part2(input.as_ref())?)),
-            (5, 1) => Ok(Box::new(crate::day5::part1(input.as_ref())?)),
-            (5, 2) => Ok(Box::new(crate::day5::part2(input.as_ref())?)),
-            (6, 1) => Ok(Box::new(crate::day6::part1(input.as_ref())?)),
-            (6, 2) => Ok(Box::new(crate::day6::part2(input.as_ref())?)),
-            (7, 1) => Ok(Box::new(crate::day7::part1(input.as_ref())?)),
-            (7, 2) => Ok(Box::new(crate::day7::part2(input.as_ref())?)),
-            (8, 1) => Ok(Box::new(crate::day8::part1(input.as_ref())?)),
-            (8, 2) => Ok(Box::new(crate::day8::part2(input.as_ref())?)),
-            (9, 1) => Ok(Box::new(crate::day9::part1(input.as_ref())?)),
-            (9, 2) => Ok(Box::new(crate::day9::part2(input.as_ref())?)),
-            (10, 1) => Ok(Box::new(crate::day10::part1(input.as_ref())?)),
-            (10, 2) => Ok(Box::new(crate::day10::part2(input.as_ref())?)),
-            (11, 1) => Ok(Box::new(crate::day11::part1(input.as_ref())?)),
-            (11, 2) => Ok(Box::new(crate::day11::part2(input.as_ref())?)),
-            (12, 1) => Ok(Box::new(crate::day12::part1(input.as_ref())?)),
+            (1, 1) => Ok(Box::new(crate::day1::part1(input)?)),
+            (1, 2) => Ok(Box::new(crate::day1::part2(input)?)),
+            (2, 1) => Ok(Box::new(crate::day2::part1(input)?)),
+            (2, 2) => Ok(Box::new(crate::day2::part2(input)?)),
+            (3, 1) => Ok(Box::new(crate::day3::part1(input)?)),
+            (3, 2) => Ok(Box::new(crate::day3::part2(input)?)),
+            (4, 1) => Ok(Box::new(crate::day4::part1(input)?)),
+            (4, 2) => Ok(Box::new(crate::day4::part2(input)?)),
+            (5, 1) => Ok(Box::new(crate::day5::part1(input)?)),
+            (5, 2) => Ok(Box::new(crate::day5::part2(input)?)),
+            (6, 1) => Ok(Box::new(crate::day6::part1(input)?)),
+            (6, 2) => Ok(Box::new(crate::day6::part2(input)?)),
+            (7, 1) => Ok(Box::new(crate::day7::part1(input)?)),
+            (7, 2) => Ok(Box::new(crate::day7::part2(input)?)),
+            (8, 1) => Ok(Box::new(crate::day8::part1(input)?)),
+            (8, 2) => Ok(Box::new(crate::day8::part2(input)?)),
+            (9, 1) => Ok(Box::new(crate::day9::part1(input)?)),
+            (9, 2) => Ok(Box::new(crate::day9::part2(input)?)),
+            (10, 1) => Ok(Box::new(crate::day10::part1(input)?)),
+            (10, 2) => Ok(Box::new(crate::day10::part2(input)?)),
+            (11, 1) => Ok(Box::new(crate::day11::part1(input)?)),
+            (11, 2) => Ok(Box::new(crate::day11::part2(input)?)),
+            (12, 1) => Ok(Box::new(crate::day12::part1(input)?)),
             // (12, 2) => Ok(Box::new(crate::day12::part2(input.as_ref())?)),
             _ => bail!("day {} part {} is not implemented", self.day, self.part),
         }

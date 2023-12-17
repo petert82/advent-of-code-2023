@@ -32,8 +32,8 @@ fn main() -> Result<()> {
 
     println!("Running {}", cli.puzzle);
 
-    let result = cli.puzzle.run()?;
-    println!("{}", result);
+    let (result, duration) = cli.puzzle.run()?;
+    println!("{} ({:?})", result, duration);
 
     Ok(())
 }
