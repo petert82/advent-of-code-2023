@@ -21,7 +21,7 @@ pub fn part1(input: &str) -> Result<usize> {
     let rows = parse_lines_to_vec(input, parse_row)?;
     let res = rows
         .par_iter()
-        .map(|r| r.get_possible_arrangements().len())
+        .map(|r| r.possible_arrangement_count())
         .sum();
     Ok(res)
 }
@@ -33,9 +33,9 @@ struct Row {
 }
 
 impl Row {
-    pub fn get_possible_arrangements(&self) -> Vec<String> {
+    pub fn possible_arrangement_count(&self) -> usize {
         let mut templates = VecDeque::from([self.record.clone()]);
-        let mut arrangements = Vec::new();
+        let mut count = 0;
         while let Some(template) = templates.pop_front() {
             // Find a '?' and generate the two possible replacements
             if let Some(pos) = template.chars().position(|c| c == '?') {
@@ -48,11 +48,11 @@ impl Row {
             } else {
                 // `template` contains no question marks, check if it's valid
                 if self.pattern.is_match(template.as_str()) {
-                    arrangements.push(template);
+                    count += 1;
                 }
             }
         }
-        arrangements
+        count
     }
 }
 
