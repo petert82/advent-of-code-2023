@@ -12,6 +12,7 @@ use nom::{
     sequence::separated_pair,
     IResult,
 };
+use rayon::prelude::*;
 use regex::Regex;
 
 use crate::parse::parse_lines_to_vec;
@@ -19,7 +20,7 @@ use crate::parse::parse_lines_to_vec;
 pub fn part1(input: &str) -> Result<usize> {
     let rows = parse_lines_to_vec(input, parse_row)?;
     let res = rows
-        .iter()
+        .par_iter()
         .map(|r| r.get_possible_arrangements().len())
         .sum();
     Ok(res)
