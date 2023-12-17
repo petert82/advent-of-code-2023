@@ -1,13 +1,13 @@
 use std::{
     collections::{HashMap, VecDeque},
-    sync::OnceLock,
+    sync::{Mutex, OnceLock},
 };
 
 use anyhow::Result;
 use nom::{
     bytes::complete::is_a,
     character::complete::{char, digit1},
-    combinator::map,
+    combinator::{map, recognize},
     multi::separated_list1,
     sequence::separated_pair,
     IResult,
@@ -55,18 +55,26 @@ impl Row {
     }
 }
 
-fn parse_pattern(input: &str) -> IResult<&str, Regex> {
-    let (input, numbers) = separated_list1(char(','), digit1)(input)?;
-    // We're changing "1,1,3" into a regex like:
-    //   ^\.*[#]{1}\.+[#]{1}\.+[#]{3}(?:\.+$|$)?
-    let re_parts = numbers
-        .into_iter()
-        .map(|n| format!("[#]{{{}}}", n))
-        .collect::<Vec<_>>();
-    let re_str = format!(r"^\.*{}(?:\.+$|$)", re_parts.join(r"\.+"));
+fn regexes() -> &'static Mutex<HashMap<String, Regex>> {
+    static REGEXES: OnceLock<Mutex<HashMap<String, Regex>>> = OnceLock::new();
+    REGEXES.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
-    // todo: cache previously seen regexes and re-use
-    Ok((input, Regex::new(re_str.as_str()).unwrap()))
+fn parse_pattern(input: &str) -> IResult<&str, Regex> {
+    let (input, numbers) = recognize(separated_list1(char(','), digit1))(input)?;
+    let mut regex_map = regexes().lock().unwrap();
+    let re = regex_map.entry(numbers.to_string()).or_insert_with(|| {
+        // We're changing "1,1,3" into a regex like:
+        //   ^\.*[#]{1}\.+[#]{1}\.+[#]{3}(?:\.+$|$)?
+        let re_parts = numbers
+            .split(',')
+            .map(|n| format!("[#]{{{}}}", n))
+            .collect::<Vec<_>>();
+        let re_str = format!(r"^\.*{}(?:\.+$|$)", re_parts.join(r"\.+"));
+        Regex::new(re_str.as_str()).unwrap()
+    });
+
+    Ok((input, re.clone()))
 }
 
 fn parse_row(input: &str) -> IResult<&str, Row> {
