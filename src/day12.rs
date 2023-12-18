@@ -1,21 +1,16 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    sync::{Mutex, OnceLock},
-};
+use std::collections::HashMap;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use nom::{
-    bytes::complete::is_a,
-    character::complete::{char, digit1},
-    combinator::{map, recognize},
-    multi::separated_list1,
+    character::complete::{char, one_of},
+    combinator::{map, map_res},
+    multi::{many1, separated_list1},
     sequence::separated_pair,
     IResult,
 };
 use rayon::prelude::*;
-use regex::Regex;
 
-use crate::parse::parse_lines_to_vec;
+use crate::parse::{number, parse_lines_to_vec};
 
 pub fn part1(input: &str) -> Result<usize> {
     let rows = parse_lines_to_vec(input, parse_row)?;
@@ -26,63 +21,124 @@ pub fn part1(input: &str) -> Result<usize> {
     Ok(res)
 }
 
+pub fn part2(input: &str) -> Result<usize> {
+    let rows = parse_lines_to_vec(input, parse_row)?;
+    let res = rows
+        .par_iter()
+        .map(|r| r.multiply(5).possible_arrangement_count())
+        .sum();
+    Ok(res)
+}
+
 #[derive(Debug)]
 struct Row {
-    record: String,
-    pattern: Regex,
+    springs: Vec<Spring>,
+    group_sizes: Vec<usize>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Spring {
+    Operational,
+    Damaged,
+    Unknown,
 }
 
 impl Row {
-    pub fn possible_arrangement_count(&self) -> usize {
-        let mut templates = VecDeque::from([self.record.clone()]);
-        let mut count = 0;
-        while let Some(template) = templates.pop_front() {
-            // Find a '?' and generate the two possible replacements
-            if let Some(pos) = template.chars().position(|c| c == '?') {
-                let mut new_template1 = template.clone();
-                new_template1.replace_range(pos..pos + 1, ".");
-                let mut new_template2 = template.clone();
-                new_template2.replace_range(pos..pos + 1, "#");
-                templates.push_back(new_template1);
-                templates.push_back(new_template2);
-            } else {
-                // `template` contains no question marks, check if it's valid
-                if self.pattern.is_match(template.as_str()) {
-                    count += 1;
-                }
-            }
+    /// Makes a new Row with `factor` copies of `springs` and `group_sizes`.
+    pub fn multiply(&self, factor: usize) -> Self {
+        // Make `factor` copies of `springs` separated by '?' (Unknown condition Spring)
+        let springs = itertools::Itertools::intersperse(
+            (0..factor)
+                .fold(vec![], |mut acc, _| {
+                    acc.push(self.springs.clone());
+                    acc
+                })
+                .into_iter(),
+            vec![Spring::Unknown],
+        )
+        .flatten()
+        .collect();
+        // Make `factor` copies of the `group_sizes` list
+        let group_sizes = (0..factor).fold(vec![], |mut acc, _| {
+            acc.extend(self.group_sizes.iter().copied());
+            acc
+        });
+        Self {
+            springs,
+            group_sizes,
         }
-        count
+    }
+
+    pub fn possible_arrangement_count(&self) -> usize {
+        let mut cache = HashMap::new();
+        self.count_arrangements(0, 0, &mut cache)
+    }
+
+    fn count_arrangements(
+        &self,
+        spring_idx: usize,
+        group_idx: usize,
+        cache: &mut HashMap<(usize, usize), usize>,
+    ) -> usize {
+        if let Some(cached) = cache.get(&(spring_idx, group_idx)) {
+            return *cached;
+        }
+
+        // check if the current group can be satisfied
+        let groups_result = self.group_sizes.get(group_idx).map_or(0, |group_size| {
+            // check we have enough springs left for the group
+            if (spring_idx + group_size) > self.springs.len() {
+                return 0;
+            }
+            // group must only contain damaged springs
+            if (0..*group_size)
+                .any(|i| self.springs.get(spring_idx + i) == Some(&Spring::Operational))
+            {
+                return 0;
+            }
+            // item after group can't be a Damaged spring (else we're still in a group)
+            if self.springs.get(spring_idx + group_size) == Some(&Spring::Damaged) {
+                return 0;
+            }
+            // we have a possibly valid group
+            self.count_arrangements(spring_idx + group_size + 1, group_idx + 1, cache)
+        });
+
+        let spring_result = match self.springs.get(spring_idx) {
+            // if we got through all of the springs/groups, we found a valid arrangement
+            None => usize::from(group_idx >= self.group_sizes.len()),
+            Some(Spring::Damaged) => 0,
+            Some(_) => self.count_arrangements(spring_idx + 1, group_idx, cache),
+        };
+
+        cache.insert((spring_idx, group_idx), groups_result + spring_result);
+        groups_result + spring_result
     }
 }
 
-fn regexes() -> &'static Mutex<HashMap<String, Regex>> {
-    static REGEXES: OnceLock<Mutex<HashMap<String, Regex>>> = OnceLock::new();
-    REGEXES.get_or_init(|| Mutex::new(HashMap::new()))
-}
+impl TryFrom<char> for Spring {
+    type Error = anyhow::Error;
 
-fn parse_pattern(input: &str) -> IResult<&str, Regex> {
-    let (input, numbers) = recognize(separated_list1(char(','), digit1))(input)?;
-    let mut regex_map = regexes().lock().unwrap();
-    let re = regex_map.entry(numbers.to_string()).or_insert_with(|| {
-        // We're changing "1,1,3" into a regex like:
-        //   ^\.*[#]{1}\.+[#]{1}\.+[#]{3}(?:\.+$|$)?
-        let re_parts = numbers
-            .split(',')
-            .map(|n| format!("[#]{{{}}}", n))
-            .collect::<Vec<_>>();
-        let re_str = format!(r"^\.*{}(?:\.+$|$)", re_parts.join(r"\.+"));
-        Regex::new(re_str.as_str()).unwrap()
-    });
-
-    Ok((input, re.clone()))
+    fn try_from(value: char) -> std::result::Result<Self, Self::Error> {
+        match value {
+            '.' => Ok(Self::Operational),
+            '#' => Ok(Self::Damaged),
+            '?' => Ok(Self::Unknown),
+            _ => bail!("Cannot create a Spring from '{}'", value),
+        }
+    }
 }
 
 fn parse_row(input: &str) -> IResult<&str, Row> {
-    let record = map(is_a(".#?"), String::from);
+    let spring = map_res(one_of(".#?"), Spring::try_from);
+    let parse_springs = many1(spring);
+    let parse_group_sizes = separated_list1(char(','), number);
     map(
-        separated_pair(record, char(' '), parse_pattern),
-        |(record, pattern)| Row { record, pattern },
+        separated_pair(parse_springs, char(' '), parse_group_sizes),
+        |(springs, group_sizes)| Row {
+            springs,
+            group_sizes,
+        },
     )(input)
 }
 
@@ -101,5 +157,11 @@ mod test {
     fn test_part1_gives_correct_answer() {
         let res = part1(INPUT).unwrap();
         assert_eq!(res, 21);
+    }
+
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT).unwrap();
+        assert_eq!(res, 525152);
     }
 }
