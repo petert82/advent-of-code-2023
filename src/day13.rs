@@ -28,9 +28,11 @@ pub fn part1(input: &str) -> Result<usize> {
 
 #[derive(Debug)]
 struct Pattern {
-    w: usize,
-    h: usize,
-    rows: Vec<Vec<char>>,
+    /// Rows from the input with each row converted to a usize, where enabled bits
+    /// represent '#'s.
+    rows: Vec<usize>,
+    /// Columns from the input represented in the same way as in `rows`
+    cols: Vec<usize>,
 }
 
 enum MirrorAlignment {
@@ -41,13 +43,8 @@ enum MirrorAlignment {
 impl Pattern {
     pub fn reflection_index(&self, dir: MirrorAlignment) -> Option<usize> {
         let rows = match dir {
-            MirrorAlignment::Horizontal => self.rows.clone(),
-            MirrorAlignment::Vertical => {
-                let transposed: Vec<Vec<_>> = (0..self.w)
-                    .map(|col| (0..self.h).map(|row| self.rows[row][col]).rev().collect())
-                    .collect();
-                transposed
-            }
+            MirrorAlignment::Horizontal => &self.rows,
+            MirrorAlignment::Vertical => &self.cols,
         };
 
         for i in 0..rows.len() - 1 {
@@ -77,6 +74,7 @@ impl Pattern {
     }
 }
 
+/// Requires that no lines in the input are longer than 64 characters
 fn parse_pattern(input: &str) -> IResult<&str, Pattern> {
     let character = one_of(".#");
     let row = many1(character);
@@ -84,15 +82,39 @@ fn parse_pattern(input: &str) -> IResult<&str, Pattern> {
     // in the list doesn't have a newline after it.
     map(
         terminated(separated_list1(line_ending, row), opt(line_ending)),
-        |rows| {
-            let w = rows[0].len();
-            Pattern {
-                w,
-                h: rows.len(),
-                rows,
-            }
+        |char_rows| {
+            let rows = char_rows
+                .iter()
+                .map(|chars| hashes_to_bits(&chars[..]))
+                .collect::<Vec<_>>();
+
+            let w = char_rows[0].len();
+            let h = char_rows.len();
+            let char_cols: Vec<Vec<_>> = (0..w)
+                .map(|col| (0..h).map(|row| char_rows[row][col]).rev().collect())
+                .collect();
+            let cols = char_cols
+                .iter()
+                .map(|chars| hashes_to_bits(&chars[..]))
+                .collect::<Vec<_>>();
+
+            Pattern { rows, cols }
         },
     )(input)
+}
+
+/// Takes a row of characters from the input and converts to
+/// a binary value where '#' characters are represented by 1
+/// and '.' characters are 0
+fn hashes_to_bits(chars: &[char]) -> usize {
+    let mut val: usize = 0;
+    for c in chars.iter() {
+        val <<= 1;
+        if *c == '#' {
+            val |= 1;
+        }
+    }
+    val
 }
 
 #[cfg(test)]
