@@ -15,10 +15,27 @@ pub fn part1(input: &str) -> Result<usize> {
         .iter()
         .map(|p| {
             let v = p
-                .reflection_index(MirrorAlignment::Vertical)
+                .reflection_index(MirrorAlignment::Vertical, false)
                 .map_or(0, |i| i);
             let h = p
-                .reflection_index(MirrorAlignment::Horizontal)
+                .reflection_index(MirrorAlignment::Horizontal, false)
+                .map_or(0, |i| i * 100);
+            h + v
+        })
+        .sum();
+    Ok(res)
+}
+
+pub fn part2(input: &str) -> Result<usize> {
+    let patterns = parse_lines_to_vec(input, parse_pattern)?;
+    let res = patterns
+        .iter()
+        .map(|p| {
+            let v = p
+                .reflection_index(MirrorAlignment::Vertical, true)
+                .map_or(0, |i| i);
+            let h = p
+                .reflection_index(MirrorAlignment::Horizontal, true)
                 .map_or(0, |i| i * 100);
             h + v
         })
@@ -41,13 +58,14 @@ enum MirrorAlignment {
 }
 
 impl Pattern {
-    pub fn reflection_index(&self, dir: MirrorAlignment) -> Option<usize> {
+    pub fn reflection_index(&self, dir: MirrorAlignment, find_smudges: bool) -> Option<usize> {
         let rows = match dir {
             MirrorAlignment::Horizontal => &self.rows,
             MirrorAlignment::Vertical => &self.cols,
         };
 
         for i in 0..rows.len() - 1 {
+            let mut found_smudge = false;
             for offset in 0..=i + 1 {
                 let candidate1 = if offset > i {
                     None
@@ -55,14 +73,30 @@ impl Pattern {
                     rows.get(i - offset)
                 };
                 let candidate2 = rows.get(i + offset + 1);
-                if candidate1.is_some() && candidate2.is_some() && candidate1 != candidate2 {
-                    // two unequal candidate rows: not in a reflection
-                    break;
+
+                if let (Some(a), Some(b)) = (candidate1, candidate2) {
+                    if a != b {
+                        // If we're looking for smudges, then rows that only differ by
+                        // one bit can be considered equal
+                        if find_smudges {
+                            let diff_bits = (a ^ b).count_ones();
+                            if diff_bits == 1 {
+                                found_smudge = true;
+                                continue;
+                            }
+                        }
+                        // two unequal candidate rows: not in a reflection
+                        break;
+                    } else {
+                        // two equal candidate rows: in a possible reflection
+                        continue;
+                    }
                 }
 
-                if candidate1.is_some() && candidate2.is_some() && candidate1 == candidate2 {
-                    // two equal candidate rows: in a possible reflection
-                    continue;
+                if find_smudges && !found_smudge {
+                    // if looking for smudges and didn't find one and we're here
+                    // we found the none-smudge reflection, so ignore it.
+                    break;
                 }
 
                 // One of the candidates was None, we didn't break yet, so must have got to
@@ -162,9 +196,9 @@ mod test {
         }
     }
 
-    // #[test]
-    // fn test_part2_gives_correct_answer() {
-    //     let res = part2(INPUT).unwrap();
-    //     assert_eq!(res, 525152);
-    // }
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT1).unwrap();
+        assert_eq!(res, 400);
+    }
 }
