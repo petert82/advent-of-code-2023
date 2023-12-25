@@ -8,9 +8,9 @@ use nom::IResult;
 use std::fmt::{Display, Formatter};
 
 pub fn part1(input: &str) -> Result<usize> {
-    let platform = parse_all_to(input, parse_platform)?;
-    println!("{}", platform);
-    Ok(1)
+    let mut platform = parse_all_to(input, parse_platform)?;
+    platform.slide_north();
+    Ok(platform.calculate_load())
 }
 
 struct Platform {
@@ -19,16 +19,50 @@ struct Platform {
     rocks: Vec<Vec<Option<Rock>>>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Rock {
     Round,
     Square,
 }
 
+impl Platform {
+    pub fn slide_north(&mut self) {
+        let mut did_move_rock = true;
+        while did_move_rock {
+            did_move_rock = false;
+            for y in 1..self.h {
+                for x in 0..self.w {
+                    if let (Some(Rock::Round), None) = (self.rocks[y][x], self.rocks[y - 1][x]) {
+                        let rock = self.rocks[y][x].take();
+                        self.rocks[y - 1][x] = rock;
+                        did_move_rock = true;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn calculate_load(&self) -> usize {
+        self.rocks
+            .iter()
+            .enumerate()
+            .map(|(y, row)| {
+                let load_per_rock = self.h - y;
+                row.iter()
+                    .filter_map(|rock| match rock {
+                        Some(Rock::Round) => Some(load_per_rock),
+                        _ => None,
+                    })
+                    .sum::<usize>()
+            })
+            .sum()
+    }
+}
+
 impl Display for Platform {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for (y, row) in self.rocks.iter().enumerate() {
-            for (x, maybe_rock) in row.iter().enumerate() {
+        for row in self.rocks.iter() {
+            for maybe_rock in row.iter() {
                 if let Some(rock) = maybe_rock {
                     write!(f, "{}", rock)?;
                 } else {
