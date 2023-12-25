@@ -10,32 +10,23 @@ use nom::{
 use crate::parse::parse_lines_to_vec;
 
 pub fn part1(input: &str) -> Result<usize> {
-    let patterns = parse_lines_to_vec(input, parse_pattern)?;
-    let res = patterns
-        .iter()
-        .map(|p| {
-            let v = p
-                .reflection_index(MirrorAlignment::Vertical, false)
-                .map_or(0, |i| i);
-            let h = p
-                .reflection_index(MirrorAlignment::Horizontal, false)
-                .map_or(0, |i| i * 100);
-            h + v
-        })
-        .sum();
-    Ok(res)
+    solve(input, false)
 }
 
 pub fn part2(input: &str) -> Result<usize> {
+    solve(input, true)
+}
+
+fn solve(input: &str, find_smudges: bool) -> Result<usize> {
     let patterns = parse_lines_to_vec(input, parse_pattern)?;
     let res = patterns
         .iter()
         .map(|p| {
             let v = p
-                .reflection_index(MirrorAlignment::Vertical, true)
+                .reflection_index(MirrorAlignment::Vertical, find_smudges)
                 .map_or(0, |i| i);
             let h = p
-                .reflection_index(MirrorAlignment::Horizontal, true)
+                .reflection_index(MirrorAlignment::Horizontal, find_smudges)
                 .map_or(0, |i| i * 100);
             h + v
         })
