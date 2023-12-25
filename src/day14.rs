@@ -25,17 +25,47 @@ enum Rock {
     Square,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SpanState {
+    Blocked,
+    Clear,
+}
+
 impl Platform {
     pub fn slide_north(&mut self) {
-        let mut did_move_rock = true;
-        while did_move_rock {
-            did_move_rock = false;
-            for y in 1..self.h {
-                for x in 0..self.w {
-                    if let (Some(Rock::Round), None) = (self.rocks[y][x], self.rocks[y - 1][x]) {
-                        let rock = self.rocks[y][x].take();
-                        self.rocks[y - 1][x] = rock;
-                        did_move_rock = true;
+        for x in 0..self.w {
+            let mut span_state: Option<SpanState> = None;
+            let mut last_rock_idx: Option<usize> = None;
+            for y in 0..self.h {
+                let cur_rock = self.rocks[y][x];
+                if y == 0 {
+                    span_state = match cur_rock {
+                        None => Some(SpanState::Clear),
+                        _ => {
+                            last_rock_idx = Some(y);
+                            Some(SpanState::Blocked)
+                        }
+                    };
+                } else {
+                    match (cur_rock, span_state.unwrap()) {
+                        (None, SpanState::Clear) => continue,
+                        (Some(Rock::Round), SpanState::Clear) => {
+                            let rock = self.rocks[y][x].take();
+                            let rock_idx = last_rock_idx.map_or(0, |i| i + 1);
+                            self.rocks[rock_idx][x] = rock;
+                            span_state = Some(SpanState::Clear);
+                            last_rock_idx = Some(rock_idx);
+                        }
+                        (Some(Rock::Square), SpanState::Clear) => {
+                            last_rock_idx = Some(y);
+                            span_state = Some(SpanState::Blocked);
+                        }
+                        (None, SpanState::Blocked) => {
+                            span_state = Some(SpanState::Clear);
+                        }
+                        (Some(_), SpanState::Blocked) => {
+                            last_rock_idx = Some(y);
+                        }
                     }
                 }
             }
