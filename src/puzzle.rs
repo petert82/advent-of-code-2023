@@ -47,7 +47,7 @@ impl Puzzle {
             (13, 1) => Ok(Box::new(crate::day13::part1(input)?)),
             (13, 2) => Ok(Box::new(crate::day13::part2(input)?)),
             (14, 1) => Ok(Box::new(crate::day14::part1(input)?)),
-            // (14, 2) => Ok(Box::new(crate::day14::part2(input)?)),
+            (14, 2) => Ok(Box::new(crate::day14::part2(input)?)),
             _ => bail!("day {} part {} is not implemented", self.day, self.part),
         }
     }

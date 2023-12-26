@@ -1,5 +1,5 @@
 use crate::parse::parse_all_to;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use nom::character::complete::{line_ending, one_of};
 use nom::combinator::{map, opt};
 use nom::multi::{many1, separated_list1};
@@ -11,6 +11,32 @@ pub fn part1(input: &str) -> Result<usize> {
     let mut platform = parse_all_to(input, parse_platform)?;
     platform.slide_north();
     Ok(platform.calculate_load())
+}
+
+pub fn part2(input: &str) -> Result<usize> {
+    let mut platform = parse_all_to(input, parse_platform)?;
+    // let the periodicity kick in by spinning for a bit
+    platform.spin_cycle(200);
+    // these values should now all be repeating with some period
+    let values = platform.spin_cycle(500);
+    if let Some(period) = find_period_length(&values) {
+        return Ok(values[(1_000_000_000 - 200 - 1) % period]);
+    }
+
+    bail!("Could not find period in the platform loads")
+}
+
+fn find_period_length(values: &[usize]) -> Option<usize> {
+    for p in 1..values.len() / 2 {
+        if has_period(values, p) {
+            return Some(p);
+        }
+    }
+    None
+}
+
+fn has_period(values: &[usize], length: usize) -> bool {
+    (0..values.len()).all(|i| values[i] == values[i % length])
 }
 
 struct Platform {
@@ -40,6 +66,18 @@ enum Direction {
 }
 
 impl Platform {
+    pub fn spin_cycle(&mut self, iterations: usize) -> Vec<usize> {
+        (0..iterations)
+            .map(|_| {
+                self.slide_north();
+                self.slide_west();
+                self.slide_south();
+                self.slide_east();
+                self.calculate_load()
+            })
+            .collect()
+    }
+
     pub fn slide_north(&mut self) {
         self.slide_vertical(Direction::North);
     }
@@ -239,9 +277,9 @@ O.#..O.#.#
         assert_eq!(res, 136);
     }
 
-    // #[test]
-    // fn test_part2_gives_correct_answer() {
-    //     let res = part2(INPUT).unwrap();
-    //     assert_eq!(res, 525152);
-    // }
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT).unwrap();
+        assert_eq!(res, 64);
+    }
 }
