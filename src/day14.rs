@@ -38,34 +38,31 @@ impl Platform {
             let mut last_rock_idx: Option<usize> = None;
             for y in 0..self.h {
                 let cur_rock = self.rocks[y][x];
-                if y == 0 {
-                    span_state = match cur_rock {
-                        None => Some(SpanState::Clear),
-                        _ => {
-                            last_rock_idx = Some(y);
-                            Some(SpanState::Blocked)
-                        }
-                    };
-                } else {
-                    match (cur_rock, span_state.unwrap()) {
-                        (None, SpanState::Clear) => continue,
-                        (Some(Rock::Round), SpanState::Clear) => {
-                            let rock = self.rocks[y][x].take();
-                            let rock_idx = last_rock_idx.map_or(0, |i| i + 1);
-                            self.rocks[rock_idx][x] = rock;
-                            span_state = Some(SpanState::Clear);
-                            last_rock_idx = Some(rock_idx);
-                        }
-                        (Some(Rock::Square), SpanState::Clear) => {
-                            last_rock_idx = Some(y);
-                            span_state = Some(SpanState::Blocked);
-                        }
-                        (None, SpanState::Blocked) => {
-                            span_state = Some(SpanState::Clear);
-                        }
-                        (Some(_), SpanState::Blocked) => {
-                            last_rock_idx = Some(y);
-                        }
+                match (cur_rock, span_state) {
+                    (None, None) => {
+                        span_state = Some(SpanState::Clear);
+                    }
+                    (Some(_), None) => {
+                        last_rock_idx = Some(y);
+                        span_state = Some(SpanState::Blocked);
+                    }
+                    (None, Some(SpanState::Clear)) => continue,
+                    (Some(Rock::Round), Some(SpanState::Clear)) => {
+                        let rock = self.rocks[y][x].take();
+                        let rock_idx = last_rock_idx.map_or(0, |i| i + 1);
+                        self.rocks[rock_idx][x] = rock;
+                        span_state = Some(SpanState::Clear);
+                        last_rock_idx = Some(rock_idx);
+                    }
+                    (Some(Rock::Square), Some(SpanState::Clear)) => {
+                        last_rock_idx = Some(y);
+                        span_state = Some(SpanState::Blocked);
+                    }
+                    (None, Some(SpanState::Blocked)) => {
+                        span_state = Some(SpanState::Clear);
+                    }
+                    (Some(_), Some(SpanState::Blocked)) => {
+                        last_rock_idx = Some(y);
                     }
                 }
             }
