@@ -31,12 +31,41 @@ enum SpanState {
     Clear,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Direction {
+    North,
+    South,
+    East,
+    West,
+}
+
 impl Platform {
     pub fn slide_north(&mut self) {
+        self.slide_vertical(Direction::North);
+    }
+
+    pub fn slide_south(&mut self) {
+        self.slide_vertical(Direction::South);
+    }
+
+    pub fn slide_east(&mut self) {
+        self.slide_horizontal(Direction::East);
+    }
+
+    pub fn slide_west(&mut self) {
+        self.slide_horizontal(Direction::West);
+    }
+
+    fn slide_vertical(&mut self, direction: Direction) {
+        let (init_rock_idx, rock_idx_adjuster): (usize, fn(usize) -> usize) = match direction {
+            Direction::North => (0, |ri| ri + 1),
+            Direction::South => (self.h - 1, |ri| ri - 1),
+            _ => unreachable!("slide_vertical only expects vertical directions"),
+        };
         for x in 0..self.w {
             let mut span_state: Option<SpanState> = None;
             let mut last_rock_idx: Option<usize> = None;
-            for y in 0..self.h {
+            for y in self.iter_indices(direction) {
                 let cur_rock = self.rocks[y][x];
                 match (cur_rock, span_state) {
                     (None, None) => {
@@ -49,7 +78,7 @@ impl Platform {
                     (None, Some(SpanState::Clear)) => continue,
                     (Some(Rock::Round), Some(SpanState::Clear)) => {
                         let rock = self.rocks[y][x].take();
-                        let rock_idx = last_rock_idx.map_or(0, |i| i + 1);
+                        let rock_idx = last_rock_idx.map_or(init_rock_idx, rock_idx_adjuster);
                         self.rocks[rock_idx][x] = rock;
                         span_state = Some(SpanState::Clear);
                         last_rock_idx = Some(rock_idx);
@@ -66,6 +95,57 @@ impl Platform {
                     }
                 }
             }
+        }
+    }
+
+    fn slide_horizontal(&mut self, direction: Direction) {
+        let (init_rock_idx, rock_idx_adjuster): (usize, fn(usize) -> usize) = match direction {
+            Direction::East => (self.w - 1, |ri| ri - 1),
+            Direction::West => (0, |ri| ri + 1),
+            _ => unreachable!("slide_horizontal only expects horizontal directions"),
+        };
+        for y in 0..self.h {
+            let mut span_state: Option<SpanState> = None;
+            let mut last_rock_idx: Option<usize> = None;
+            for x in self.iter_indices(direction) {
+                let cur_rock = self.rocks[y][x];
+                match (cur_rock, span_state) {
+                    (None, None) => {
+                        span_state = Some(SpanState::Clear);
+                    }
+                    (Some(_), None) => {
+                        last_rock_idx = Some(x);
+                        span_state = Some(SpanState::Blocked);
+                    }
+                    (None, Some(SpanState::Clear)) => continue,
+                    (Some(Rock::Round), Some(SpanState::Clear)) => {
+                        let rock = self.rocks[y][x].take();
+                        let rock_idx = last_rock_idx.map_or(init_rock_idx, rock_idx_adjuster);
+                        self.rocks[y][rock_idx] = rock;
+                        span_state = Some(SpanState::Clear);
+                        last_rock_idx = Some(rock_idx);
+                    }
+                    (Some(Rock::Square), Some(SpanState::Clear)) => {
+                        last_rock_idx = Some(x);
+                        span_state = Some(SpanState::Blocked);
+                    }
+                    (None, Some(SpanState::Blocked)) => {
+                        span_state = Some(SpanState::Clear);
+                    }
+                    (Some(_), Some(SpanState::Blocked)) => {
+                        last_rock_idx = Some(x);
+                    }
+                }
+            }
+        }
+    }
+
+    fn iter_indices(&self, direction: Direction) -> Box<dyn Iterator<Item = usize>> {
+        match direction {
+            Direction::North => Box::new((0..self.h).into_iter()),
+            Direction::South => Box::new((0..self.h).into_iter().rev()),
+            Direction::East => Box::new((0..self.w).into_iter().rev()),
+            Direction::West => Box::new((0..self.w).into_iter()),
         }
     }
 
