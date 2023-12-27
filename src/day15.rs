@@ -17,6 +17,21 @@ pub fn part1(input: &str) -> Result<usize> {
     Ok(res)
 }
 
+pub fn part2(input: &str) -> Result<usize> {
+    let steps = parse_all_to(input, parse_initialization_sequence)?;
+    let state = steps.iter().fold(LensBoxes::new(), |mut state, step| {
+        state.handle(&step.instruction);
+        state
+    });
+
+    Ok(state.focusing_power())
+}
+
+#[derive(Debug)]
+struct LensBoxes {
+    boxes: [Vec<(String, usize)>; 256],
+}
+
 #[derive(Debug)]
 struct Step {
     hash: usize,
@@ -27,6 +42,60 @@ struct Step {
 enum Instruction {
     Insert { label: String, focal_length: usize },
     Remove { label: String },
+}
+
+impl LensBoxes {
+    pub fn new() -> Self {
+        const DEFAULT: Vec<(String, usize)> = Vec::new();
+        Self {
+            boxes: [DEFAULT; 256],
+        }
+    }
+
+    pub fn handle(&mut self, instruction: &Instruction) {
+        match instruction {
+            Instruction::Insert {
+                label,
+                focal_length,
+            } => self.insert(&label, *focal_length),
+            Instruction::Remove { label } => self.remove(&label),
+        }
+    }
+
+    pub fn focusing_power(&self) -> usize {
+        self.boxes
+            .iter()
+            .enumerate()
+            .map(|(box_idx, b)| {
+                b.iter()
+                    .enumerate()
+                    .map(|(lens_idx, (_, focal_length))| {
+                        (box_idx + 1) * (lens_idx + 1) * focal_length
+                    })
+                    .sum::<usize>()
+            })
+            .sum()
+    }
+
+    fn insert(&mut self, key: &str, focal_length: usize) {
+        let box_nr = hash(key);
+        if let Some(idx) = self.index_in_box(box_nr, key) {
+            self.boxes[box_nr][idx] = (String::from(key), focal_length);
+        } else {
+            self.boxes[box_nr].push((String::from(key), focal_length));
+        }
+    }
+
+    fn remove(&mut self, key: &str) {
+        let box_nr = hash(key);
+        if let Some(idx) = self.index_in_box(box_nr, key) {
+            self.boxes[box_nr].remove(idx);
+        };
+    }
+
+    fn index_in_box(&self, box_nr: usize, key: &str) -> Option<usize> {
+        self.boxes[box_nr].iter().position(|(k, _)| k == key)
+    }
 }
 
 impl Step {
@@ -83,9 +152,9 @@ mod test {
         assert_eq!(res, 1320);
     }
 
-    // #[test]
-    // fn test_part2_gives_correct_answer() {
-    //     let res = part2(INPUT).unwrap();
-    //     assert_eq!(res, 64);
-    // }
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT).unwrap();
+        assert_eq!(res, 145);
+    }
 }
