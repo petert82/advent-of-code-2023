@@ -7,8 +7,37 @@ use anyhow::{bail, Result};
 
 pub fn part1(input: &str) -> Result<usize> {
     let mut state = parse_state(input)?;
-    state.energize();
+    state.energize(Beam(Coord { x: 0, y: 0 }, Direction::Right));
     Ok(state.energized_tile_count())
+}
+
+pub fn part2(input: &str) -> Result<usize> {
+    let mut state = parse_state(input)?;
+    let w = state.w;
+    let h = state.h;
+    let max_energized = (0..w)
+        // Iterate through beam starting postions at the top and bottom..
+        .flat_map(|x| {
+            vec![
+                Beam(Coord { x, y: 0 }, Direction::Down),
+                Beam(Coord { x, y: h - 1 }, Direction::Up),
+            ]
+        })
+        // ... and left and right
+        .chain((0..h).flat_map(|y| {
+            vec![
+                Beam(Coord { x: 0, y }, Direction::Right),
+                Beam(Coord { x: w - 1, y }, Direction::Right),
+            ]
+        }))
+        // work out how many tiles are energized by each initial beam
+        .map(|b| {
+            state.energize(b);
+            state.energized_tile_count()
+        })
+        .max()
+        .unwrap();
+    Ok(max_energized)
 }
 
 struct State {
@@ -57,11 +86,10 @@ impl State {
         }
     }
 
-    pub fn energize(&mut self) {
+    pub fn energize(&mut self, initial_beam: Beam) {
         self.energized_tiles.clear();
         let mut seen_beams = HashSet::new();
-        let mut beams_to_process: VecDeque<Beam> =
-            VecDeque::from([Beam(Coord { x: 0, y: 0 }, Direction::Right)]);
+        let mut beams_to_process: VecDeque<Beam> = VecDeque::from([initial_beam]);
 
         while let Some(beam) = beams_to_process.pop_front() {
             seen_beams.insert(beam);
@@ -273,9 +301,9 @@ mod test {
         assert_eq!(res, 46);
     }
 
-    // #[test]
-    // fn test_part2_gives_correct_answer() {
-    //     let res = part2(INPUT).unwrap();
-    //     assert_eq!(res, 145);
-    // }
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let res = part2(INPUT).unwrap();
+        assert_eq!(res, 51);
+    }
 }
