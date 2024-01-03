@@ -39,6 +39,46 @@ pub fn part1(input: &str) -> Result<usize> {
     dijkstra(starts, &get_neighbours, &get_cost, &is_dest).ok_or(anyhow!("could not find path"))
 }
 
+pub fn part2(input: &str) -> Result<usize> {
+    let costs = parse_costs(input)?;
+
+    let get_neighbours = |vertex: &Vertex| -> Vec<Vertex> {
+        // Once an ultra crucible starts moving in a direction, it needs to move a minimum of four blocks in
+        // that direction before it can turn
+        let poss_new = if vertex.forward_count < 4 {
+            vec![vertex.forward(&costs)]
+        } else if vertex.forward_count == 10 {
+            // an ultra crucible can move a maximum of ten consecutive blocks without turning
+            vec![vertex.left(&costs), vertex.right(&costs)]
+        } else {
+            vec![
+                vertex.forward(&costs),
+                vertex.left(&costs),
+                vertex.right(&costs),
+            ]
+        };
+        poss_new.iter().filter_map(|v| *v).collect()
+    };
+
+    let get_cost = |to: &Vertex| -> usize {
+        let Coord(x, y) = to.pos.1;
+        costs.values[y][x]
+    };
+
+    let is_dest = |vertex: &Vertex| -> bool {
+        let Coord(x, y) = vertex.pos.1;
+        // has to have moved at least 4 blocks in a straight line before it can stop
+        x == costs.w - 1 && y == costs.h - 1 && vertex.forward_count >= 4
+    };
+
+    let starts = vec![
+        Vertex::new(Direction::East, 0, 0, 0),
+        Vertex::new(Direction::South, 0, 0, 0),
+    ];
+
+    dijkstra(starts, &get_neighbours, &get_cost, &is_dest).ok_or(anyhow!("could not find path"))
+}
+
 fn parse_costs(input: &str) -> Result<Costs> {
     let mut h = 0;
     let mut w = 0;
@@ -235,15 +275,23 @@ mod test {
 2546548887735
 4322674655533";
 
+    const INPUT2: &str = "111111111111
+999999999991
+999999999991
+999999999991
+999999999991";
+
     #[test]
     fn test_part1_gives_correct_answer() {
         let res = part1(INPUT).unwrap();
         assert_eq!(res, 102);
     }
 
-    // #[test]
-    // fn test_part2_gives_correct_answer() {
-    //     let res = part2(INPUT).unwrap();
-    //     assert_eq!(res, 51);
-    // }
+    #[test]
+    fn test_part2_gives_correct_answer() {
+        let cases = vec![(INPUT, 94), (INPUT2, 71)];
+        for (input, expect) in cases {
+            assert_eq!(part2(input).unwrap(), expect);
+        }
+    }
 }
