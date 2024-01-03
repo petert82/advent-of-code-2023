@@ -3,58 +3,131 @@ use std::{
     collections::{BinaryHeap, HashMap, HashSet},
 };
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 
 pub fn part1(input: &str) -> Result<usize> {
-    Ok(1)
+    let costs = parse_costs(input)?;
+
+    let get_neighbours = |vertex: &Vertex| -> Vec<Vertex> {
+        let poss_new = if vertex.forward_count < 3 {
+            vec![
+                vertex.forward(&costs),
+                vertex.left(&costs),
+                vertex.right(&costs),
+            ]
+        } else {
+            vec![vertex.left(&costs), vertex.right(&costs)]
+        };
+        poss_new.iter().filter_map(|v| *v).collect()
+    };
+
+    let get_cost = |to: &Vertex| -> usize {
+        let Coord(x, y) = to.pos.1;
+        costs.values[y][x]
+    };
+
+    let is_dest = |vertex: &Vertex| -> bool {
+        let Coord(x, y) = vertex.pos.1;
+        x == costs.w - 1 && y == costs.h - 1
+    };
+
+    let starts = vec![
+        Vertex::new(Direction::East, 0, 0, 0),
+        Vertex::new(Direction::South, 0, 0, 0),
+    ];
+
+    dijkstra(starts, &get_neighbours, &get_cost, &is_dest).ok_or(anyhow!("could not find path"))
+}
+
+fn parse_costs(input: &str) -> Result<Costs> {
+    let mut h = 0;
+    let mut w = 0;
+    let mut rows = Vec::new();
+    for line in input.lines() {
+        let mut row = Vec::new();
+        h += 1;
+        w = 0;
+        for c in line.chars() {
+            w += 1;
+            let val = c.to_digit(10).ok_or(anyhow!("parsing failed"))? as usize;
+            row.push(val);
+        }
+        rows.push(row);
+    }
+    Ok(Costs { w, h, values: rows })
 }
 
 fn dijkstra(
-    start: Vertex,
-    adjacencies: HashMap<Vertex, Vec<(Vertex, usize)>>,
-) -> HashMap<Vertex, usize> {
+    starts: Vec<Vertex>,
+    get_neighbours: &dyn Fn(&Vertex) -> Vec<Vertex>,
+    get_cost: &dyn Fn(&Vertex) -> usize,
+    is_dest: &dyn Fn(&Vertex) -> bool,
+) -> Option<usize> {
     let mut distances = HashMap::new();
     let mut to_visit = BinaryHeap::new();
     let mut visited = HashSet::new();
 
-    distances.insert(start, 0);
-    to_visit.push(Reverse(Visit {
-        vertex: start,
-        distance: 0,
-    }));
+    for start in starts.into_iter() {
+        distances.insert(start, 0);
+        to_visit.push(Reverse(Visit {
+            vertex: start,
+            distance: 0,
+        }));
+    }
 
     while let Some(Reverse(Visit { vertex, distance })) = to_visit.pop() {
         if !visited.insert(vertex) {
             continue;
         }
 
-        if let Some(neighbours) = adjacencies.get(&vertex) {
-            for (neighbour, cost) in neighbours {
-                let new_distance = distance + cost;
-                let is_closer = distances
-                    .get(&neighbour)
-                    .map_or(true, |prev| new_distance < *prev);
+        if is_dest(&vertex) {
+            return Some(distance);
+        }
 
-                if is_closer {
-                    distances.insert(*neighbour, new_distance);
-                    to_visit.push(Reverse(Visit {
-                        vertex: *neighbour,
-                        distance: new_distance,
-                    }));
-                }
+        for neighbour in get_neighbours(&vertex) {
+            let cost = get_cost(&neighbour);
+            let new_distance = distance + cost;
+            let is_closer = distances
+                .get(&neighbour)
+                .map_or(true, |prev| new_distance < *prev);
+
+            if is_closer {
+                distances.insert(neighbour, new_distance);
+                to_visit.push(Reverse(Visit {
+                    vertex: neighbour,
+                    distance: new_distance,
+                }));
             }
         }
     }
 
-    distances
+    None
+}
+
+struct Costs {
+    w: usize,
+    h: usize,
+    values: Vec<Vec<usize>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Direction {
+    North,
+    South,
+    East,
+    West,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Coord(usize, usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct Vector(Direction, Coord);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Vertex {
-    pos: Coord,
+    pos: Vector,
+    forward_count: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,8 +137,71 @@ struct Visit {
 }
 
 impl Vertex {
-    pub fn new(x: usize, y: usize) -> Self {
-        Self { pos: Coord(x, y) }
+    pub fn new(d: Direction, x: usize, y: usize, forward_count: usize) -> Self {
+        Self {
+            pos: Vector(d, Coord(x, y)),
+            forward_count,
+        }
+    }
+
+    pub fn forward(&self, grid: &Costs) -> Option<Self> {
+        let Self {
+            pos: Vector(direction, coord),
+            forward_count,
+        } = *self;
+        let Coord(x, y) = coord;
+
+        let new_coord = match direction {
+            Direction::North if y > 0 => Some(Coord(x, y - 1)),
+            Direction::East if x < grid.w - 1 => Some(Coord(x + 1, y)),
+            Direction::South if y < grid.h - 1 => Some(Coord(x, y + 1)),
+            Direction::West if x > 0 => Some(Coord(x - 1, y)),
+            _ => None,
+        };
+
+        match new_coord {
+            None => None,
+            Some(coord) => Some(Self {
+                pos: Vector(direction, coord),
+                forward_count: forward_count + 1,
+            }),
+        }
+    }
+
+    pub fn left(&self, grid: &Costs) -> Option<Self> {
+        let Self {
+            pos: Vector(direction, coord),
+            forward_count: _,
+        } = *self;
+        let new_direction = match direction {
+            Direction::North => Direction::West,
+            Direction::East => Direction::North,
+            Direction::South => Direction::East,
+            Direction::West => Direction::South,
+        };
+        Self {
+            pos: Vector(new_direction, coord),
+            forward_count: 0,
+        }
+        .forward(grid)
+    }
+
+    pub fn right(&self, grid: &Costs) -> Option<Self> {
+        let Self {
+            pos: Vector(direction, coord),
+            forward_count: _,
+        } = *self;
+        let new_direction = match direction {
+            Direction::North => Direction::East,
+            Direction::East => Direction::South,
+            Direction::South => Direction::West,
+            Direction::West => Direction::North,
+        };
+        Self {
+            pos: Vector(new_direction, coord),
+            forward_count: 0,
+        }
+        .forward(grid)
     }
 }
 
@@ -84,39 +220,6 @@ impl PartialOrd for Visit {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    fn test_pathing_works() {
-        // 122
-        // 111
-        // 111
-        let v1 = Vertex::new(0, 0);
-        let v2 = Vertex::new(1, 0);
-        let v3 = Vertex::new(2, 0);
-        let v4 = Vertex::new(0, 1);
-        let v5 = Vertex::new(1, 1);
-        let v6 = Vertex::new(2, 1);
-        let v7 = Vertex::new(0, 2);
-        let v8 = Vertex::new(1, 2);
-        let v9 = Vertex::new(2, 2);
-
-        let mut adj = HashMap::new();
-        adj.insert(v1, vec![(v2, 2), (v4, 1)]);
-        adj.insert(v2, vec![(v1, 1), (v3, 2), (v5, 1)]);
-        adj.insert(v3, vec![(v2, 2), (v6, 1)]);
-        adj.insert(v4, vec![(v1, 1), (v5, 1), (v7, 1)]);
-        adj.insert(v5, vec![(v2, 2), (v4, 1), (v6, 1), (v8, 1)]);
-        adj.insert(v6, vec![(v3, 2), (v5, 1), (v9, 1)]);
-        adj.insert(v7, vec![(v4, 1), (v8, 1)]);
-        adj.insert(v8, vec![(v7, 1), (v5, 1), (v9, 1)]);
-        adj.insert(v9, vec![(v8, 1), (v6, 1)]);
-
-        let distances = dijkstra(v1, adj);
-        assert_eq!(distances.get(&v1), Some(&0));
-        assert_eq!(distances.get(&v2), Some(&2));
-        assert_eq!(distances.get(&v3), Some(&4));
-        assert_eq!(distances.get(&v9), Some(&4));
-    }
 
     const INPUT: &str = "2413432311323
 3215453535623
