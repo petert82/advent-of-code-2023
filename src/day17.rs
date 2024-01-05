@@ -199,13 +199,10 @@ impl Vertex {
             _ => None,
         };
 
-        match new_coord {
-            None => None,
-            Some(coord) => Some(Self {
-                pos: Vector(direction, coord),
-                forward_count: forward_count + 1,
-            }),
-        }
+        new_coord.map(|coord| Self {
+            pos: Vector(direction, coord),
+            forward_count: forward_count + 1,
+        })
     }
 
     pub fn left(&self, grid: &Costs) -> Option<Self> {

@@ -27,12 +27,7 @@ pub fn part2(input: &str) -> Result<usize> {
 }
 
 fn find_period_length(values: &[usize]) -> Option<usize> {
-    for p in 1..values.len() / 2 {
-        if has_period(values, p) {
-            return Some(p);
-        }
-    }
-    None
+    (1..values.len() / 2).find(|&p| has_period(values, p))
 }
 
 fn has_period(values: &[usize], length: usize) -> bool {
@@ -180,10 +175,10 @@ impl Platform {
 
     fn iter_indices(&self, direction: Direction) -> Box<dyn Iterator<Item = usize>> {
         match direction {
-            Direction::North => Box::new((0..self.h).into_iter()),
-            Direction::South => Box::new((0..self.h).into_iter().rev()),
-            Direction::East => Box::new((0..self.w).into_iter().rev()),
-            Direction::West => Box::new((0..self.w).into_iter()),
+            Direction::North => Box::new(0..self.h),
+            Direction::South => Box::new((0..self.h).rev()),
+            Direction::East => Box::new((0..self.w).rev()),
+            Direction::West => Box::new(0..self.w),
         }
     }
 

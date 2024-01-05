@@ -222,7 +222,7 @@ impl Display for State {
                 } else if let Some(entity) = self.entities.get(&Coord { x, y }) {
                     write!(f, "{}", entity)?;
                 } else {
-                    write!(f, "{}", '.')?;
+                    write!(f, ".")?;
                 }
             }
             writeln!(f)?;

@@ -57,8 +57,8 @@ impl LensBoxes {
             Instruction::Insert {
                 label,
                 focal_length,
-            } => self.insert(&label, *focal_length),
-            Instruction::Remove { label } => self.remove(&label),
+            } => self.insert(label, *focal_length),
+            Instruction::Remove { label } => self.remove(label),
         }
     }
 
