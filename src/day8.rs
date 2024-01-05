@@ -66,7 +66,7 @@ impl<'a> State<'a> {
             .collect::<Vec<&str>>();
 
         // Entries are how long each "ghost" took to find their first end point
-        let mut end_steps = ghost_keys.into_iter().map(|k| {
+        let end_steps = ghost_keys.into_iter().map(|k| {
             let mut directions_cyle = self.directions.iter().cycle();
             let mut steps = 0;
             let mut key = k;
@@ -86,8 +86,7 @@ impl<'a> State<'a> {
         });
 
         // Find the lowest common multiple of all of the ghosts' end points
-        let n = end_steps.next().unwrap();
-        end_steps.fold(n, lcm)
+        end_steps.reduce(lcm).unwrap()
     }
 }
 
