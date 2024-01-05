@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 
+mod algorithm;
 mod day1;
 mod day10;
 mod day11;
@@ -19,6 +20,7 @@ mod day7;
 mod day8;
 mod day9;
 mod parse;
+mod point;
 mod puzzle;
 
 #[derive(Parser)]

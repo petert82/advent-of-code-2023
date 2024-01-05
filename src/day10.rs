@@ -4,8 +4,9 @@ use std::{
     fmt::Display,
 };
 
+use crate::algorithm::shoelace;
+use crate::point::Point;
 use anyhow::{bail, Result};
-use itertools::Itertools;
 
 pub fn part1(input: &str) -> Result<usize> {
     let grid = Grid::try_from(input)?;
@@ -79,37 +80,13 @@ impl Grid {
     }
 
     pub fn loop_enclosed_point_count(&self) -> i32 {
-        // Calculate the area enclosed by the loop
-        // https://en.wikipedia.org/wiki/Shoelace_formula
-        let mut vertices = self
+        let vertices = self
             .loop_coords()
             .iter()
-            .filter(|c| self.pipes.get(*c).unwrap().is_corner())
+            .chain(std::iter::once(&self.loop_coords()[0]))
             .collect::<Vec<_>>();
-        vertices.push(vertices.first().unwrap());
 
-        let mut area = vertices
-            .iter()
-            .tuple_windows()
-            .map(|(a, b)| {
-                let x1 = a.0;
-                let y1 = a.1;
-                let x2 = b.0;
-                let y2 = b.1;
-                let p1 = x1 * y2;
-                let p2 = y1 * x2;
-                p1 - p2
-            })
-            .sum::<i32>()
-            / 2;
-        if area < 0 {
-            area *= -1;
-        }
-
-        // Then calculate the number of points enclosed by the loop
-        // loopArea - (boundaryPointsCount / 2) + 1
-        // https://en.wikipedia.org/wiki/Pick's_theorem
-        area - (self.loop_coords().len() as i32 / 2) + 1
+        shoelace::enclosed_area(&vertices)
     }
 }
 
@@ -130,6 +107,16 @@ impl Coord {
         .into_iter()
         .filter(Self::is_valid)
         .collect()
+    }
+}
+
+impl Point<i32> for &Coord {
+    fn x(&self) -> i32 {
+        self.0
+    }
+
+    fn y(&self) -> i32 {
+        self.1
     }
 }
 
@@ -156,10 +143,6 @@ impl Pipe {
     /// of the other exit (assuming it would exit to a valid grid coordinate.
     pub fn other_exit(&self, pipe_pos: Coord, exit: Coord) -> Option<Coord> {
         self.exits(pipe_pos).into_iter().find(|e| *e != exit)
-    }
-
-    pub fn is_corner(&self) -> bool {
-        !matches!(self, Self::NS | Self::EW)
     }
 }
 
