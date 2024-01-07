@@ -14,7 +14,7 @@ use crate::{
 };
 
 pub fn part1(input: &str) -> Result<usize> {
-    let instructions = parse_lines_to_vec(input, parse_instruction)?;
+    let instructions = parse_lines_to_vec(input, parse_part1_instruction)?;
     let coords = apply_instructions(&instructions);
     let enclosed_point_count = shoelace::enclosed_area(&coords);
     Ok(coords.len() + enclosed_point_count as usize - 1)
@@ -66,7 +66,10 @@ enum Direction {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Coord(i32, i32);
 
-fn parse_instruction(input: &str) -> IResult<&str, Instruction> {
+fn parse_part1_instruction(input: &str) -> IResult<&str, Instruction> {
+    let parse_direction = map_res(one_of("UDLR"), Direction::try_from);
+    let parse_colour = delimited(tag("(#"), alphanumeric1, char(')'));
+
     map(
         tuple((
             terminated(parse_direction, char(' ')),
@@ -75,10 +78,6 @@ fn parse_instruction(input: &str) -> IResult<&str, Instruction> {
         )),
         |(dir, length, _colour)| Instruction { dir, length },
     )(input)
-}
-
-fn parse_direction(input: &str) -> IResult<&str, Direction> {
-    map_res(one_of("UDLR"), Direction::try_from)(input)
 }
 
 impl TryFrom<char> for Direction {
@@ -93,10 +92,6 @@ impl TryFrom<char> for Direction {
             value => Err(format!("invalid direction: {}", value)),
         }
     }
-}
-
-fn parse_colour(input: &str) -> IResult<&str, &str> {
-    delimited(tag("(#"), alphanumeric1, char(')'))(input)
 }
 
 impl Point<i32> for Coord {
