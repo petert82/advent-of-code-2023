@@ -1,15 +1,18 @@
+use std::iter::Sum;
+
 use crate::point::Point;
 use itertools::Itertools;
-use num::{Integer, ToPrimitive};
+use num::{FromPrimitive, Integer, ToPrimitive};
 
 /// Calculates the area enclosed by the loop defined by `loop_points`.
 /// Requires that`loop_points` contains all integer points on the
 /// loop's perimeter.
-pub fn enclosed_area<V, I>(loop_points: &[V]) -> i32
+pub fn enclosed_area<V, I>(loop_points: &[V]) -> I
 where
     V: Sized + Point<I>,
-    I: Integer + ToPrimitive,
+    I: Copy + Integer + FromPrimitive + ToPrimitive + Sum,
 {
+    let two = FromPrimitive::from_i32(2).unwrap();
     // Calculate the area enclosed by the loop
     // https://en.wikipedia.org/wiki/Shoelace_formula
     let mut area = loop_points
@@ -22,18 +25,20 @@ where
             let y2 = b.y();
             let p1 = x1 * y2;
             let p2 = y1 * x2;
-            (p1 - p2).to_i32().unwrap()
+            p1 - p2
         })
-        .sum::<i32>()
-        / 2;
-    if area < 0 {
-        area *= -1;
+        .sum::<I>()
+        / two;
+    if area < I::zero() {
+        let minus_one = FromPrimitive::from_i32(-1).unwrap();
+        area = area * minus_one;
     }
 
     // Then calculate the number of points enclosed by the loop
     // loopArea - (boundaryPointsCount / 2) + 1
     // https://en.wikipedia.org/wiki/Pick's_theorem
-    area - (loop_points.len() as i32 / 2) + 1
+    let boundary_points_count = <I as FromPrimitive>::from_usize(loop_points.len()).unwrap();
+    area - (boundary_points_count / two) + I::one()
 }
 
 #[cfg(test)]
