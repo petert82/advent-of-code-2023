@@ -1,8 +1,10 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use std::{
     fmt::Display,
     time::{Duration, Instant},
 };
+
+use crate::input::Loader;
 
 #[derive(Debug, Clone)]
 pub struct Puzzle {
@@ -11,9 +13,11 @@ pub struct Puzzle {
 }
 
 impl Puzzle {
-    pub fn run(&self) -> Result<(Box<dyn Display>, Duration)> {
-        let input_file = format!("./input/day{}.txt", self.day);
-        let input = std::fs::read_to_string(input_file).context("could not read input file")?;
+    pub fn run<L>(&self, loader: L) -> Result<(Box<dyn Display>, Duration)>
+    where
+        L: Loader,
+    {
+        let input = loader.load(self.day)?;
         let start = Instant::now();
         Ok((self.run_part(input.as_ref())?, start.elapsed()))
     }

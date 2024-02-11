@@ -1,6 +1,8 @@
 use anyhow::Result;
 use clap::Parser;
 
+use crate::input::file_loader::FileLoader;
+
 mod algorithm;
 mod day1;
 mod day10;
@@ -20,6 +22,7 @@ mod day6;
 mod day7;
 mod day8;
 mod day9;
+mod input;
 mod parse;
 mod point;
 mod puzzle;
@@ -40,7 +43,9 @@ fn main() -> Result<()> {
 
     println!("Running {}", cli.puzzle);
 
-    let (result, duration) = cli.puzzle.run()?;
+    let file_loader = FileLoader::new("./input");
+
+    let (result, duration) = cli.puzzle.run(file_loader)?;
     println!("{} ({:?})", result, duration);
 
     Ok(())
